@@ -1,0 +1,530 @@
+---
+alwaysApply: true
+---
+# LeakShield Frozen Architecture
+
+## Project
+
+LeakShield is a 72-hour Zero Dependency Hackathon 2026 project.
+
+It is a command-line repository security auditor written in Python 3.14.
+
+Its purpose is to detect:
+
+- leaked secrets and credentials
+- suspicious credential-like values
+- high-risk Python security patterns
+- contextual security risks
+
+It produces:
+
+- CLI reports
+- JSON reports
+- HTML reports
+
+## Absolute Dependency Constraint
+
+LeakShield must contain ZERO external dependencies.
+
+The implementation may import ONLY these approved modules:
+
+argparse
+pathlib
+re
+ast
+json
+html
+hashlib
+math
+base64
+fnmatch
+os
+unittest
+datetime
+
+Do NOT introduce any other imported module unless the architecture is explicitly changed and approved.
+
+Do NOT:
+
+- install pip packages
+- use external APIs
+- use cloud services
+- call external security tools
+- use subprocess
+- vendor third-party libraries
+- invoke package-installed CLI tools
+
+Do not assume that another Python standard-library module is allowed merely because it is part of Python.
+
+## Frozen Architecture
+
+The final module boundaries are:
+
+leakshield/
+    __main__.py
+    cli.py
+    config.py
+    discovery.py
+    scanner.py
+    secrets.py
+    ast_security.py
+    findings.py
+    reporting.py
+
+Do not introduce additional application modules unless explicitly approved.
+
+## Module Responsibilities
+
+__main__.py
+- Entry point only.
+- Must remain extremely small.
+
+cli.py
+- CLI argument parsing.
+- Convert CLI arguments into ScanConfig.
+- Select output format.
+- Select severity threshold.
+- Invoke scanner.
+- Select reporter.
+- Handle CLI-level errors and exit behavior.
+- Must not contain detection logic.
+
+config.py
+- Define ScanConfig.
+- Configuration defaults and validation.
+- CLI-derived configuration representation.
+- Do not implement TOML parsing.
+
+discovery.py
+- Repository traversal.
+- Ignore rules.
+- File filtering.
+- File classification.
+- Deterministic traversal.
+- Do not perform security detection.
+
+scanner.py
+- Orchestrate the complete scan.
+- Coordinate discovery, analysis, context processing, scoring,
+  deduplication, redaction, and ScanResult creation.
+- Must not contain individual detector implementations.
+
+secrets.py
+- Secret detection.
+- Credential pattern detection.
+- Entropy analysis.
+- JWT-like detection and safe decoding.
+- Secret-related evidence generation.
+- Detectors remain statically defined.
+- Do not create a plugin framework.
+
+ast_security.py
+- Parse Python source using ast.
+- Implement focused security rules.
+- Initial rules:
+  - eval()
+  - exec()
+  - dangerous subprocess usage
+  - shell=True
+  - selected dangerous imports/APIs
+  - hardcoded credential assignments where AST context strengthens detection
+- Never execute repository code.
+
+findings.py
+- Core finding data structures.
+- Evidence representation.
+- Context enrichment.
+- Finding normalization.
+- Confidence.
+- Severity.
+- Risk.
+- Deduplication.
+- Secret redaction.
+- ScanResult.
+
+reporting.py
+- CLI reporter.
+- JSON reporter.
+- HTML reporter.
+- All reporters consume ScanResult.
+- Reporters must not perform detection.
+
+## Core Data Models
+
+The architecture uses these conceptual models:
+
+ScanConfig
+FileInfo
+AnalyzedFile
+Evidence
+RawFinding
+Finding
+ScanResult
+
+Do not create unnecessary domain classes.
+
+## Pipeline
+
+The canonical pipeline is:
+
+CLI
+→ ScanConfig
+→ Discovery
+→ Filtering
+→ Classification
+→ AnalyzedFile
+→ Secret Analysis / Python AST Analysis
+→ Raw Findings
+→ Context Analysis
+→ Finding Normalization
+→ Confidence / Severity / Risk
+→ Deduplication
+→ Redaction
+→ ScanResult
+→ Reporting
+
+## Secret Detection
+
+Regex/pattern matching is evidence, not proof.
+
+Secret confidence must combine multiple signals where available:
+
+- pattern match
+- credential/key name
+- entropy
+- file context
+- value context
+- JWT structure
+- placeholder/test indicators
+- environment-variable lookup
+- detector-specific evidence
+
+A regex match alone must not automatically mean "definite secret."
+
+## Entropy
+
+Entropy is a supporting signal.
+
+It must not independently establish that a value is a secret.
+
+Avoid evaluating entropy indiscriminately across every source substring.
+
+Short/common/obvious placeholder values should not receive strong entropy evidence.
+
+Entropy behavior must be deterministic.
+
+## JWT
+
+JWT-like values may be structurally identified and safely decoded.
+
+Malformed JWT-like values must not crash the scan.
+
+Decoding a JWT does NOT prove authenticity.
+
+Do not claim that a JWT is valid merely because its header/payload can be decoded.
+
+JWT signature/authenticity verification is out of scope unless explicitly approved later.
+
+## Python AST
+
+Only Python files enter the AST analysis path.
+
+AST parsing failures must be isolated to the affected file.
+
+Repository code must NEVER be executed.
+
+AST rules produce the same RawFinding representation used by secret detectors.
+
+## Context
+
+Context may include:
+
+- variable names
+- assignment targets
+- comments
+- nearby source lines
+- file names
+- directory names
+- placeholder/test indicators
+- environment-variable lookups
+
+Context modifies confidence.
+
+Context must not blindly suppress evidence.
+
+Example:
+
+password = os.getenv("PASSWORD")
+
+should not be treated as a hardcoded password merely because PASSWORD appears.
+
+## Confidence / Severity / Risk
+
+These concepts must remain distinct.
+
+Confidence:
+How likely the finding is correct.
+
+Severity:
+How dangerous the condition would be if valid.
+
+Risk:
+Final prioritization based on severity and confidence.
+
+Use a small deterministic and documented scoring/mapping approach.
+
+Do not use machine learning.
+
+Do not use unexplained arbitrary formulas.
+
+## Deduplication
+
+Multiple detectors may identify the same underlying issue.
+
+Deduplicate using a deterministic identity based primarily on:
+
+- repository-relative file
+- location
+- finding type
+- normalized candidate identity
+
+Detector identity is evidence, not necessarily finding identity.
+
+When multiple detectors identify the same issue, merge their evidence into one Finding.
+
+Different exposure locations should remain separate findings.
+
+## Redaction
+
+Raw secret values may temporarily exist inside the internal analysis pipeline only when required for detection or correlation.
+
+Raw secrets must NEVER reach:
+
+- CLI output
+- JSON output
+- HTML output
+- user-facing errors
+- logs
+- debug output
+
+The security boundary is:
+
+Detection
+→ Normalization
+→ Scoring
+→ Deduplication
+→ Redaction
+→ ScanResult
+→ Reporting
+
+Reporters must only receive the redacted representation.
+
+## Error Handling
+
+A single problematic file should normally not terminate the repository scan.
+
+Handle gracefully:
+
+- unreadable files
+- permission errors
+- invalid encodings
+- malformed Python
+- malformed JWTs
+- extremely large files
+- broken symlinks
+- disappearing files
+
+Invalid configuration should fail before scanning begins.
+
+## Performance
+
+For MVP:
+
+- filter ignored files before reading content
+- skip obvious binary files
+- enforce a deterministic large-file limit
+- parse AST only for Python files
+- calculate entropy only for meaningful candidates
+- avoid unnecessary repeated file reads
+- use sequential processing
+
+Do not add concurrency unless explicitly approved.
+
+## Determinism
+
+The same repository and configuration must produce stable findings.
+
+Use:
+
+- deterministic traversal
+- deterministic finding ordering
+- deterministic scoring
+- deterministic deduplication
+- deterministic report generation
+
+Do not use randomness or external services.
+
+Timing must not affect finding identity or report semantics.
+
+## Reporting
+
+All reporters consume ScanResult.
+
+CLI:
+Human-readable findings and summary.
+
+JSON:
+Stable machine-readable representation.
+
+HTML:
+Self-contained human-readable report.
+
+All repository-derived HTML content must be escaped.
+
+## CLI
+
+Conceptual interface:
+
+leakshield <path>
+leakshield <path> --format json
+leakshield <path> --format html
+leakshield <path> --severity high
+leakshield <path> --help
+
+Initial exit-code policy:
+
+0 = scan completed with no qualifying findings
+1 = scan completed with qualifying findings
+2 = invalid CLI/configuration or fatal invocation error
+
+## Configuration
+
+Do NOT implement .zero-dep.toml in the MVP.
+
+The approved module list does not include tomllib.
+
+Do not add tomllib.
+
+Do not build a custom TOML parser.
+
+Use CLI configuration and ScanConfig for MVP.
+
+## Security
+
+Treat every repository as hostile input.
+
+LeakShield must never:
+
+- execute repository code
+- execute discovered commands
+- trust repository content
+- expose detected secrets
+- inject unescaped repository content into HTML
+
+Protect against:
+
+- huge files
+- malformed input
+- crafted JWTs
+- malicious Python syntax
+- HTML injection
+- secret disclosure
+- pathological input
+- unsafe filesystem traversal
+
+## Scope
+
+MVP:
+
+- deterministic repository scanning
+- ignore/filtering
+- file classification
+- secret detection
+- entropy supporting signal
+- JWT detection/metadata
+- Python AST security rules
+- context analysis
+- confidence/severity/risk
+- deduplication
+- redaction
+- CLI output
+- JSON output
+- HTML output
+- graceful error handling
+
+High-value additions only after MVP stability:
+
+- more secret patterns
+- more AST rules
+- better placeholder detection
+- improved evidence explanations
+- additional useful CLI filtering
+- improved HTML presentation
+
+Out of scope:
+
+- external APIs
+- network access
+- cloud validation
+- AI/LLM
+- machine learning
+- databases
+- distributed scanning
+- parallel workers
+- custom TOML parser
+- full Python static analysis
+- JWT authenticity verification
+- credential revocation
+- automatic repository modification
+- web dashboard
+- GUI
+- plugin marketplace/framework
+- continuous monitoring
+
+## Architecture Freeze Rule
+
+This architecture is frozen.
+
+When implementing future phases:
+
+- do not invent new modules
+- do not invent new architectural layers
+- do not introduce dependencies
+- do not introduce frameworks
+- do not introduce a plugin framework
+- do not create unnecessary abstractions
+- do not silently change data models
+
+If an implementation requirement conflicts with this architecture:
+
+STOP.
+
+Do not silently redesign the architecture.
+
+Instead, explicitly report:
+
+ARCHITECTURE CONFLICT
+
+and explain:
+
+1. What requirement conflicts.
+2. Which architectural rule it conflicts with.
+3. Why the current architecture is insufficient.
+4. The smallest proposed architectural change.
+
+Wait for explicit approval before changing the architecture.
+
+## Implementation Discipline
+
+When asked to implement a phase:
+
+1. Read the relevant existing files first.
+2. Follow this architecture.
+3. Make the smallest change necessary.
+4. Do not implement future phases early.
+5. Do not add speculative abstractions.
+6. Do not install dependencies.
+7. Do not modify unrelated files.
+8. Explain any architecture conflict before making changes.
+9. Prefer simple readable Python over clever implementations.
+10. Keep security-sensitive behavior explicit and auditable.
