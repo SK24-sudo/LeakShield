@@ -1,10 +1,10 @@
 # LeakShield Project State
 
-Last Completed Phase: Phase 4D - Redaction (implemented and contract-tested at the current repository boundary)
+Last Completed Phase: Phase 5C - HTML output integration (complete and frozen)
 
-Current Phase: Phase 4D - Output integration deferred / future boundary design required
+Current Phase: Phase 5C - HTML output integration complete / frozen
 
-Status: COMPLETE FOR CURRENTLY DEFINED REPOSITORY SCOPE / FUTURE OUTPUT INTEGRATION DEFERRED
+Status: COMPLETE FOR CURRENTLY DEFINED REPOSITORY SCOPE / ALL PHASES 3-5 COMPLETE
 
 ## Phase 4A — Context Analysis
 
@@ -133,6 +133,14 @@ Phase 4 detection-to-redaction processing is complete through the currently defi
 - Phase 4B - Finding Normalization / Confidence / Severity / Risk
 - Phase 4C - Deduplication
 - Phase 4D - Redaction (implementation boundary complete; external integration deferred)
+- Phase 5A - CLI output integration (complete / frozen)
+- Phase 5B - JSON output integration (complete / frozen)
+- Phase 5C - HTML output integration (complete / frozen)
+
+## Phase 5 Validation
+
+Full regression suite passed.
+Total tests: 232/232.
 
 ## Important Constraints
 
