@@ -212,6 +212,13 @@ class Phase4CDeduplicationTests(unittest.TestCase):
         self.assertTrue(all(isinstance(item, Finding) for item in normalized))
         self.assertIs(normalized[0].raw_finding, raw[0])
 
+    def test_normalize_findings_assigns_metadata(self):
+        normalized = normalize_findings([self._make_raw()])[0]
+
+        self.assertIsNotNone(normalized.confidence)
+        self.assertIsNotNone(normalized.severity)
+        self.assertIsNotNone(normalized.risk)
+
 
 if __name__ == "__main__":
     unittest.main()

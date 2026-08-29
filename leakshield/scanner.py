@@ -41,7 +41,16 @@ def normalize_findings(raw_findings):
     """Convert a deterministic list of RawFinding values into normalized Finding objects."""
     if raw_findings is None:
         return []
-    return [Finding(raw_finding) for raw_finding in raw_findings]
+
+    normalized = []
+    for raw_finding in raw_findings:
+        finding = Finding(raw_finding)
+        finding.assign_confidence()
+        finding.assign_severity()
+        finding.calculate_risk()
+        normalized.append(finding)
+
+    return normalized
 
 
 def deduplicate_findings(findings):
