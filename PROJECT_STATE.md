@@ -177,9 +177,11 @@ Final validation:
 
 Fixture and demo-target distinction:
 
-- The bundled `examples/vulnerable_repo` fixture files are currently empty.
+- The bundled `examples/vulnerable_repo` fixture files were empty during the original Phase 7C verification.
 - A temporary external demo target was used to verify actual end-to-end detection.
 - The bundled demo fixture was not populated or modified as part of Phase 7C documentation synchronization.
+- After the original Phase 7C verification, the bundled fixture was populated with intentionally fake demonstration data for repeatable local demos.
+- This newly populated bundled fixture is distinct from the temporary external target used during the original Phase 7C verification.
 
 ## Important Constraints
 

@@ -61,7 +61,7 @@ python -m unittest discover -s tests -v
 The current verification run completed with:
 
 ```text
-Ran 235 tests in 0.076s
+Ran 236 tests
 
 OK
 ```

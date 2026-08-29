@@ -1,0 +1,7 @@
+These values are synthetic demo data and are not valid production credentials.
+
+Provider-token pattern:
+ghp_testfixture000000001
+
+Synthetic JWT:
+eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiJkZW1vLXVzZXIiLCJwdXJwb3NlIjoiZXhhbXBsZSJ9.demo-signature

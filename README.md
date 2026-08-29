@@ -62,10 +62,12 @@ The available formats are:
 Example CLI output:
 
 ```text
-Findings: 0
+Findings: 10
 ```
 
-The displayed finding count depends on the contents of the scanned target.
+The bundled `examples\vulnerable_repo` target contains intentionally fake
+demonstration data and produces the output above. The displayed finding count
+depends on the contents of the scanned target.
 
 ## What LeakShield Detects
 
@@ -241,7 +243,7 @@ The regression suite covers:
 * HTML reporting
 * Deterministic scanning
 
-At the time of this Phase 7A documentation work, the full regression suite passes with **235 tests**.
+The full regression suite passes with **236 tests**.
 
 ## Limitations
 
@@ -278,7 +280,13 @@ LeakShield does not aim to:
 
 Phases 1 through 6D are complete and frozen.
 
-Phase 7A covers README documentation.
+Phase 7A is complete.
+
+Phase 7B is complete.
+
+Phase 7C demo verification is complete. The CLI, JSON, and HTML paths have
+been verified successfully, and the full regression suite passes with
+**236/236 tests**.
 
 See [`PROJECT_STATE.md`](PROJECT_STATE.md) for the authoritative repository state and phase history.
 
