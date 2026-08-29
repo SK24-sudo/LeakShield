@@ -1,10 +1,10 @@
 # LeakShield Project State
 
-Last Completed Phase: Phase 5C - HTML output integration (complete and frozen)
+Last Completed Phase: Phase 6D - Security Threat Model (complete and frozen)
 
-Current Phase: Phase 5C - HTML output integration complete / frozen
+Current Phase: Phase 7A
 
-Status: COMPLETE FOR CURRENTLY DEFINED REPOSITORY SCOPE / ALL PHASES 3-5 COMPLETE
+Status: COMPLETE FOR CURRENTLY DEFINED REPOSITORY SCOPE / ALL PHASES 3-6 COMPLETE
 
 ## Phase 4A — Context Analysis
 
@@ -141,6 +141,21 @@ Phase 4 detection-to-redaction processing is complete through the currently defi
 
 Full regression suite passed.
 Total tests: 232/232.
+
+## Phase 6D — Security Threat Model
+
+STATUS: COMPLETED & FROZEN
+
+Completed work:
+
+- Created THREAT_MODEL.md
+- Documented security objectives
+- Documented protected assets
+- Defined trust boundaries
+- Defined threat actors and attack surfaces
+- Recorded security assumptions
+- Listed existing mitigations
+- Documented known limitations and future security considerations
 
 ## Important Constraints
 
