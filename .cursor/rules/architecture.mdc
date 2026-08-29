@@ -163,6 +163,54 @@ ScanResult
 
 Do not create unnecessary domain classes.
 
+## RawFinding Schema
+
+`RawFinding` is a detector-produced intermediate finding with exactly these fields:
+
+- `finding_type: str`
+- `relative_path: str`
+- `location: tuple` of two integers, representing a 1-based line and column
+- `candidate_value: str`
+- `detector_id: str`
+- `evidence: dict`
+
+`RawFinding` contains no scoring, confidence, severity, risk, deduplication,
+redaction, reporting, or serialization requirements.
+
+## Detector Interface
+
+The private pattern detector is a module-level function with this interface:
+
+```python
+def _detect_pattern_secrets(source_text, file_info):
+  ...
+```
+
+It receives source text and an existing `FileInfo`, and returns a list of
+`RawFinding` objects. Its stable detector identity is `pattern-secret`. It has
+no filesystem access, configuration input, or scanner state.
+
+The public secret-detection entry point is:
+
+```python
+def detect_secrets(source_text, file_info):
+  ...
+```
+
+It invokes detectors directly in a fixed sequence and returns their combined
+RawFinding list. The current sequence contains only
+`_detect_pattern_secrets`. It does not use registries, plugins, dynamic
+imports, reflection, or concurrency.
+
+Each detector invocation has its own `try/except Exception` boundary. A
+detector failure contributes no findings, is not printed, logged, or returned,
+and must not expose candidate values. Other detectors continue to execute.
+
+`RawFinding.location` is a `(line, column)` tuple with 1-based values. Column
+is the 1-based source-text character position of the match's first character.
+Findings within a detector are ordered by source position, and detector results
+follow the fixed detector sequence.
+
 ## Pipeline
 
 The canonical pipeline is:
