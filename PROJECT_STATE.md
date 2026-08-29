@@ -1,10 +1,10 @@
 # LeakShield Project State
 
-Last Completed Phase: Phase 6D - Security Threat Model (complete and frozen)
+Last Completed Phase: Phase 7C - Demo Verification (complete)
 
-Current Phase: Phase 7A
+Current Phase: Phase 7C - Demo Verification (completed)
 
-Status: COMPLETE FOR CURRENTLY DEFINED REPOSITORY SCOPE / ALL PHASES 3-6 COMPLETE
+Status: COMPLETE / END-TO-END CLI, JSON, AND HTML DEMO PATHS VERIFIED
 
 ## Phase 4A — Context Analysis
 
@@ -156,6 +156,30 @@ Completed work:
 - Recorded security assumptions
 - Listed existing mitigations
 - Documented known limitations and future security considerations
+
+## Phase 7C — Demo Verification
+
+STATUS: COMPLETED
+
+Phase 7C successfully verified the end-to-end CLI scan, JSON output, and HTML output paths against a real temporary external demo target.
+
+During demo verification, the following integration bug was discovered:
+
+- `normalize_findings()` constructed `Finding` objects without invoking the existing Phase 4B confidence, severity, and risk normalization methods.
+- This caused JSON output to contain null confidence, severity, and risk metadata and caused the HTML output path to crash when handling a null severity.
+- The minimal normalization integration fix was committed as `c7d3878` (`fix: apply finding normalization in scanner`).
+
+Final validation:
+
+- Full regression suite passed: 236/236 tests
+- CLI, JSON, and HTML demo paths verified successfully
+- Working tree is clean and changes were pushed to `origin/main`
+
+Fixture and demo-target distinction:
+
+- The bundled `examples/vulnerable_repo` fixture files are currently empty.
+- A temporary external demo target was used to verify actual end-to-end detection.
+- The bundled demo fixture was not populated or modified as part of Phase 7C documentation synchronization.
 
 ## Important Constraints
 
