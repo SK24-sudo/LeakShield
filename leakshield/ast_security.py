@@ -3,14 +3,31 @@ import ast
 from leakshield.findings import RawFinding
 
 
-def _detect_eval_calls(source_text, file_info):
-    """Return direct built-in eval() calls from Python source text."""
+_AST_CACHE = {}
+
+
+def _parse_python_ast(source_text):
+    """Parse Python source once per unique source text and reuse the resulting AST."""
     if not isinstance(source_text, str):
-        return []
+        return None
+
+    if source_text in _AST_CACHE:
+        return _AST_CACHE[source_text]
 
     try:
         tree = ast.parse(source_text)
     except SyntaxError:
+        _AST_CACHE[source_text] = None
+        return None
+
+    _AST_CACHE[source_text] = tree
+    return tree
+
+
+def _detect_eval_calls(source_text, file_info):
+    """Return direct built-in eval() calls from Python source text."""
+    tree = _parse_python_ast(source_text)
+    if tree is None:
         return []
 
     findings = []
@@ -41,12 +58,8 @@ def _detect_eval_calls(source_text, file_info):
 
 def _detect_exec_calls(source_text, file_info):
     """Return direct built-in exec() calls from Python source text."""
-    if not isinstance(source_text, str):
-        return []
-
-    try:
-        tree = ast.parse(source_text)
-    except SyntaxError:
+    tree = _parse_python_ast(source_text)
+    if tree is None:
         return []
 
     findings = []
@@ -75,12 +88,8 @@ def _detect_exec_calls(source_text, file_info):
 
 def _detect_subprocess_popen(source_text, file_info):
     """Return direct subprocess.Popen(...) calls from Python source text."""
-    if not isinstance(source_text, str):
-        return []
-
-    try:
-        tree = ast.parse(source_text)
-    except SyntaxError:
+    tree = _parse_python_ast(source_text)
+    if tree is None:
         return []
 
     findings = []
@@ -123,12 +132,8 @@ def _detect_subprocess_popen(source_text, file_info):
 
 def _detect_shell_true(source_text, file_info):
     """Return direct subprocess.Popen(..., shell=True) calls from Python source text."""
-    if not isinstance(source_text, str):
-        return []
-
-    try:
-        tree = ast.parse(source_text)
-    except SyntaxError:
+    tree = _parse_python_ast(source_text)
+    if tree is None:
         return []
 
     findings = []
@@ -166,12 +171,8 @@ def _detect_shell_true(source_text, file_info):
 
 def _detect_os_system(source_text, file_info):
     """Return direct os.system(...) calls from Python source text."""
-    if not isinstance(source_text, str):
-        return []
-
-    try:
-        tree = ast.parse(source_text)
-    except SyntaxError:
+    tree = _parse_python_ast(source_text)
+    if tree is None:
         return []
 
     findings = []
@@ -218,12 +219,8 @@ _CREDENTIAL_NAMES = {
 
 def _detect_credential_assignments(source_text, file_info):
     """Return hardcoded credential assignments with approved variable names."""
-    if not isinstance(source_text, str):
-        return []
-
-    try:
-        tree = ast.parse(source_text)
-    except SyntaxError:
+    tree = _parse_python_ast(source_text)
+    if tree is None:
         return []
 
     findings = []

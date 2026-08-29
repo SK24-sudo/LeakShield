@@ -6,6 +6,8 @@ from leakshield.ast_security import (
     _detect_shell_true,
     _detect_subprocess_popen,
 )
+from leakshield.config import ScanConfig
+from leakshield.discovery import discover, filter_files
 from leakshield.findings import Finding
 from leakshield.secrets import detect_secrets
 
@@ -118,3 +120,13 @@ def collect_raw_findings(source_text, file_info):
         findings.extend(detector(source_text, file_info))
 
     return _enrich_with_extension(findings, file_info)
+
+
+def scan(config: ScanConfig) -> list[Finding]:
+    """Scan the configured target and return the aggregated findings list."""
+    files = filter_files(discover(config.target), config.ignore_patterns)
+    findings = []
+    for file_info in files:
+        with open(file_info.path, "r", encoding="utf-8", errors="replace") as handle:
+            findings.extend(collect_findings(handle.read(), file_info))
+    return findings

@@ -1,9 +1,10 @@
 import unittest
 from pathlib import Path
 
+from leakshield.config import ScanConfig
 from leakshield.discovery import FileInfo
 from leakshield.findings import Finding, RawFinding
-from leakshield.scanner import collect_raw_findings, deduplicate_findings, normalize_findings
+from leakshield.scanner import collect_raw_findings, deduplicate_findings, normalize_findings, scan
 
 
 def _make_file_info(extension):
@@ -63,6 +64,32 @@ class ScannerCollectionTests(unittest.TestCase):
         self.assertEqual(txt_findings[0].evidence["file_extension"], ".txt")
         self.assertEqual(py_findings[1].evidence["file_extension"], ".py")
         self.assertEqual(txt_findings[1].evidence["file_extension"], ".txt")
+
+
+class ScannerDeterminismTests(unittest.TestCase):
+    def test_scan_is_deterministic_across_repeated_runs_on_same_repository(self):
+        target = Path(__file__).resolve().parents[1] / "examples" / "vulnerable_repo"
+
+        def snapshot(findings):
+            return [
+                (
+                    finding.finding_type,
+                    finding.relative_path,
+                    finding.location,
+                    finding.candidate_value,
+                    finding.detector_id,
+                    tuple(sorted(finding.evidence.items())),
+                    finding.confidence,
+                    finding.severity,
+                    finding.risk,
+                )
+                for finding in findings
+            ]
+
+        first = scan(ScanConfig(str(target)))
+        second = scan(ScanConfig(str(target)))
+
+        self.assertEqual(snapshot(first), snapshot(second))
 
 
 class Phase4CDeduplicationTests(unittest.TestCase):
