@@ -1,0 +1,4 @@
+This is a safe repository for demonstrating LeakShield's clean scan.
+
+No hardcoded credentials, no dangerous patterns.
+API keys are loaded from environment variables.

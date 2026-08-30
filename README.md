@@ -62,12 +62,43 @@ The available formats are:
 Example CLI output:
 
 ```text
-Findings: 10
+LeakShield scan
+Target: examples\vulnerable_repo
+
+10 potential security findings found.
+
+Location: dangerous_code.py:8:5
+What: Direct eval() call
+Why: A direct eval() call was detected by AST analysis.
+Action: Avoid eval() with untrusted input; consider safer alternatives.
 ```
 
 The bundled `examples\vulnerable_repo` target contains intentionally fake
-demonstration data and produces the output above. The displayed finding count
-depends on the contents of the scanned target.
+demonstration data and produces output similar to the example above. The
+displayed findings depend on the contents of the scanned target.
+
+### Clean Demo
+
+To see a scan with no findings, run LeakShield against the bundled clean fixture:
+
+```powershell
+python -m leakshield examples\clean_repo
+```
+
+Expected output:
+
+```text
+LeakShield scan
+Target: examples\clean_repo
+
+No supported security patterns detected.
+
+LeakShield did not find any supported patterns in the files it analyzed.
+A clean scan is not a guarantee that the repository contains no secrets.
+```
+
+The `examples\clean_repo` fixture contains safe code with no hardcoded
+credentials and no dangerous patterns.
 
 ## What LeakShield Detects
 
