@@ -363,6 +363,99 @@ No static scanner can establish complete security from a clean scan alone.
 The clean demo is simply a way to see what a repository with no supported LeakShield findings looks like.
 
 ---
+## Demo repositories vs. your repository
+
+LeakShield includes example repositories so you can safely demonstrate and test how the scanner behaves.
+
+**These examples are provided by LeakShield. They are demonstration inputs, not places where you need to put your own project.**
+
+### Demo only
+
+Use the bundled examples for learning, demonstrations, and testing:
+
+```powershell
+python -m leakshield examples\vulnerable_repo
+python -m leakshield examples\clean_repo
+```
+
+| Input                      | Purpose                                                                      |
+| -------------------------- | ---------------------------------------------------------------------------- |
+| `examples\vulnerable_repo` | Demonstration repository containing intentional security-sensitive patterns  |
+| `examples\clean_repo`      | Demonstration repository where no supported LeakShield findings are expected |
+| `<YOUR_REPOSITORY_PATH>`   | The actual repository you want to scan                                       |
+
+Do **not** copy your repository into `examples\`, move your code into `examples\vulnerable_repo`, or modify the examples to test your own project.
+
+### Real use
+
+To scan your own repository, provide its actual path:
+
+```powershell
+python -m leakshield <YOUR_REPOSITORY_PATH>
+```
+
+`<YOUR_REPOSITORY_PATH>` is a placeholder. Replace it with the path to the repository you want LeakShield to scan.
+
+For example:
+
+```text
+LeakShield project:
+C:\Projects\LeakShield
+
+Your application:
+C:\Projects\my-app
+```
+
+You can then run:
+
+```powershell
+cd C:\Projects\LeakShield
+
+python -m leakshield C:\Projects\my-app
+```
+
+LeakShield is the **tool**. `C:\Projects\my-app` is the **repository being scanned**.
+
+Your repository can live somewhere completely different from the LeakShield project. You do not need to copy it into LeakShield or into `examples\`.
+
+### The `.` form
+
+You can also scan the current directory:
+
+```powershell
+python -m leakshield .
+```
+
+`.` means **the current directory**.
+
+For example:
+
+```powershell
+cd C:\Projects\my-app
+python -m leakshield .
+```
+
+Here, `.` means:
+
+```text
+C:\Projects\my-app
+```
+
+It does **not** automatically mean the LeakShield project. It always refers to whatever directory your terminal is currently in.
+
+The simple mental model is:
+
+```text
+BUNDLED EXAMPLES
+       ↓
+DEMO / LEARNING / TESTING
+
+YOUR REPOSITORY
+       ↓
+REAL SCAN
+```
+
+**The examples demonstrate LeakShield. Your repository is what you scan.**
 
 # Scan Your Own Project: Practical Example
 
