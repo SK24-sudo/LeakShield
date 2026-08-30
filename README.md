@@ -1197,6 +1197,7 @@ The test suite covers areas including:
 * Finding normalization
 * Confidence, severity, and risk
 * Deduplication
+* Equivalent duplicate finding consolidation across multiple locations
 * Redaction
 * CLI behavior
 * JSON reporting

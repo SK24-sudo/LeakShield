@@ -305,6 +305,92 @@ class CliFormatterTests(unittest.TestCase):
         with self.assertRaises(TypeError):
             format_findings_cli(None)
 
+    def test_consolidated_finding_shows_multiple_locations_in_cli(self):
+        raw = RawFinding(
+            finding_type="credential-assignment",
+            relative_path="a.py",
+            location=(3, 1),
+            candidate_value="super-secret-key",
+            detector_id="pattern-secret",
+            evidence={"pattern": "credential-assignment", "credential_name": "password"},
+        )
+        finding = Finding(raw)
+        finding.confidence = "high"
+        finding.severity = "high"
+        finding.risk = "high"
+        finding.locations = [("a.py", (3, 1)), ("b.py", (10, 1))]
+
+        result = format_findings_cli([finding])
+        self.assertIn("Locations:", result)
+        self.assertIn("a.py:3:1", result)
+        self.assertIn("b.py:10:1", result)
+
+    def test_single_location_finding_uses_location_label(self):
+        finding = _make_finding()
+        result = format_findings_cli([finding])
+        self.assertIn("Location: src/example.py:12:3", result)
+        self.assertNotIn("Locations:", result)
+
+
+class JsonConsolidationTests(unittest.TestCase):
+    def test_findings_to_json_includes_locations_when_consolidated(self):
+        raw = RawFinding(
+            finding_type="credential-assignment",
+            relative_path="a.py",
+            location=(3, 1),
+            candidate_value="super-secret-key",
+            detector_id="pattern-secret",
+            evidence={"pattern": "credential-assignment", "credential_name": "password"},
+        )
+        finding = Finding(raw)
+        finding.confidence = "high"
+        finding.severity = "high"
+        finding.risk = "high"
+        finding.locations = [("a.py", (3, 1)), ("b.py", (10, 1))]
+
+        raw_json = findings_to_json([finding.redacted_copy()])
+        payload = json.loads(raw_json)
+
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["location"], [3, 1])
+        self.assertEqual(payload[0]["relative_path"], "a.py")
+        self.assertIn("locations", payload[0])
+        self.assertEqual(len(payload[0]["locations"]), 2)
+        self.assertEqual(payload[0]["locations"][0]["relative_path"], "a.py")
+        self.assertEqual(payload[0]["locations"][0]["location"], [3, 1])
+        self.assertEqual(payload[0]["locations"][1]["relative_path"], "b.py")
+        self.assertEqual(payload[0]["locations"][1]["location"], [10, 1])
+
+    def test_findings_to_json_omits_locations_when_not_consolidated(self):
+        finding = _make_finding()
+        raw_json = findings_to_json([finding.redacted_copy()])
+        payload = json.loads(raw_json)
+
+        self.assertEqual(len(payload), 1)
+        self.assertNotIn("locations", payload[0])
+
+
+class HtmlConsolidationTests(unittest.TestCase):
+    def test_findings_to_html_shows_multiple_locations(self):
+        raw = RawFinding(
+            finding_type="credential-assignment",
+            relative_path="a.py",
+            location=(3, 1),
+            candidate_value="super-secret-key",
+            detector_id="pattern-secret",
+            evidence={"pattern": "credential-assignment", "credential_name": "password"},
+        )
+        finding = Finding(raw)
+        finding.confidence = "high"
+        finding.severity = "high"
+        finding.risk = "high"
+        finding.locations = [("a.py", (3, 1)), ("b.py", (10, 1))]
+
+        result = findings_to_html([finding.redacted_copy()], target="src/app")
+        self.assertIn("Locations:", result)
+        self.assertIn("a.py:3:1", result)
+        self.assertIn("b.py:10:1", result)
+
 
 if __name__ == "__main__":
     unittest.main()

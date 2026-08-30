@@ -59,7 +59,7 @@ class Finding:
 	_SECRET_FAMILY_FINDINGS = {"private-key", "provider-token", "jwt", "credential-assignment"}
 	_DANGEROUS_CODE_FINDINGS = {"eval", "exec", "subprocess", "shell-true", "os-system"}
 
-	def __init__(self, raw_finding):
+	def __init__(self, raw_finding, locations=None):
 		if not isinstance(raw_finding, RawFinding):
 			raise TypeError("raw_finding must be a RawFinding instance")
 
@@ -73,6 +73,7 @@ class Finding:
 		self.confidence = None
 		self.severity = None
 		self.risk = None
+		self.locations = locations
 
 	def _count_corroborating_signals(self):
 		if not isinstance(self.evidence, dict):
@@ -154,6 +155,7 @@ class Finding:
 		redacted.confidence = self.confidence
 		redacted.severity = self.severity
 		redacted.risk = self.risk
+		redacted.locations = self.locations
 		return redacted
 
 	def calculate_risk(self):

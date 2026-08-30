@@ -5,7 +5,7 @@ from pathlib import Path
 from leakshield.config import ScanConfig
 from leakshield.discovery import FileInfo
 from leakshield.findings import Finding, RawFinding
-from leakshield.scanner import collect_raw_findings, deduplicate_findings, normalize_findings, scan
+from leakshield.scanner import collect_raw_findings, consolidate_findings, deduplicate_findings, normalize_findings, scan
 
 
 def _make_file_info(extension):
@@ -268,6 +268,102 @@ class IgnoreDirectoryIntegrationTests(unittest.TestCase):
             self.assertTrue(
                 any(finding.finding_type == "credential-assignment" for finding in findings)
             )
+
+
+class DuplicateConsolidationTests(unittest.TestCase):
+    def _make_raw(self, **overrides):
+        data = {
+            "finding_type": "credential-assignment",
+            "relative_path": "config.py",
+            "location": (1, 1),
+            "candidate_value": "secret-value",
+            "detector_id": "pattern-secret",
+            "evidence": {"pattern": "credential-assignment", "credential_name": "password"},
+        }
+        data.update(overrides)
+        return RawFinding(
+            finding_type=data["finding_type"],
+            relative_path=data["relative_path"],
+            location=data["location"],
+            candidate_value=data["candidate_value"],
+            detector_id=data["detector_id"],
+            evidence=data["evidence"],
+        )
+
+    def test_equivalent_findings_at_different_locations_are_consolidated(self):
+        first = Finding(self._make_raw(finding_type="credential-assignment", relative_path="a.py", location=(3, 1), candidate_value="secret123", detector_id="pattern-secret", evidence={"pattern": "credential-assignment", "credential_name": "password"}))
+        first.confidence = "high"
+        first.severity = "high"
+        first.risk = "high"
+
+        second = Finding(self._make_raw(finding_type="credential-assignment", relative_path="b.py", location=(10, 1), candidate_value="secret123", detector_id="pattern-secret", evidence={"pattern": "credential-assignment", "credential_name": "password"}))
+        second.confidence = "high"
+        second.severity = "high"
+        second.risk = "high"
+
+        consolidated = consolidate_findings([first, second])
+
+        self.assertEqual(len(consolidated), 1)
+        self.assertEqual(len(consolidated[0].locations), 2)
+        self.assertEqual(consolidated[0].locations[0], ("a.py", (3, 1)))
+        self.assertEqual(consolidated[0].locations[1], ("b.py", (10, 1)))
+
+    def test_different_findings_at_same_location_are_not_consolidated(self):
+        eval_finding = Finding(self._make_raw(finding_type="eval", relative_path="dangerous.py", location=(8, 5), candidate_value="eval", detector_id="ast-security", evidence={"pattern": "eval"}))
+        eval_finding.confidence = "medium"
+        eval_finding.severity = "medium"
+        eval_finding.risk = "medium"
+
+        cred_finding = Finding(self._make_raw(finding_type="credential-assignment", relative_path="dangerous.py", location=(8, 1), candidate_value="password", detector_id="ast-security", evidence={"pattern": "credential-assignment", "credential_name": "password"}))
+        cred_finding.confidence = "high"
+        cred_finding.severity = "high"
+        cred_finding.risk = "high"
+
+        consolidated = consolidate_findings([eval_finding, cred_finding])
+
+        self.assertEqual(len(consolidated), 2)
+
+    def test_true_exact_duplicates_are_deduplicated_before_consolidation(self):
+        finding = Finding(self._make_raw(finding_type="credential-assignment", relative_path="a.py", location=(3, 1), candidate_value="secret123", detector_id="pattern-secret", evidence={"pattern": "credential-assignment", "credential_name": "password"}))
+        finding.confidence = "high"
+        finding.severity = "high"
+        finding.risk = "high"
+
+        duplicate = Finding(self._make_raw(finding_type="credential-assignment", relative_path="a.py", location=(3, 1), candidate_value="secret123", detector_id="pattern-secret", evidence={"pattern": "credential-assignment", "credential_name": "password"}))
+        duplicate.confidence = "high"
+        duplicate.severity = "high"
+        duplicate.risk = "high"
+
+        deduped = deduplicate_findings([finding, duplicate])
+        self.assertEqual(len(deduped), 1)
+
+    def test_consolidation_preserves_single_location_findings(self):
+        finding = Finding(self._make_raw(finding_type="credential-assignment", relative_path="a.py", location=(3, 1), candidate_value="secret123", detector_id="pattern-secret", evidence={"pattern": "credential-assignment", "credential_name": "password"}))
+        finding.confidence = "high"
+        finding.severity = "high"
+        finding.risk = "high"
+
+        consolidated = consolidate_findings([finding])
+
+        self.assertEqual(len(consolidated), 1)
+        self.assertIsNone(consolidated[0].locations)
+
+    def test_consolidated_finding_redaction_does_not_leak_secrets(self):
+        first = Finding(self._make_raw(finding_type="credential-assignment", relative_path="a.py", location=(3, 1), candidate_value="RAW_SECRET_123", detector_id="pattern-secret", evidence={"pattern": "credential-assignment", "credential_name": "password"}))
+        first.confidence = "high"
+        first.severity = "high"
+        first.risk = "high"
+
+        second = Finding(self._make_raw(finding_type="credential-assignment", relative_path="b.py", location=(10, 1), candidate_value="RAW_SECRET_123", detector_id="pattern-secret", evidence={"pattern": "credential-assignment", "credential_name": "password"}))
+        second.confidence = "high"
+        second.severity = "high"
+        second.risk = "high"
+
+        consolidated = consolidate_findings([first, second])
+        redacted = consolidated[0].redacted_copy()
+
+        self.assertEqual(redacted.candidate_value, "[REDACTED]")
+        self.assertNotIn("RAW_SECRET_123", str(redacted.evidence))
 
 
 if __name__ == "__main__":

@@ -74,6 +74,45 @@ def deduplicate_findings(findings):
     return deduped
 
 
+def _consolidation_identity(finding):
+    """Return an identity suitable for grouping equivalent findings across locations."""
+    return (
+        finding.finding_type,
+        finding.candidate_value,
+        finding.detector_id,
+        _freeze_for_identity(finding.evidence),
+        finding.confidence,
+        finding.severity,
+        finding.risk,
+    )
+
+
+def consolidate_findings(findings):
+    """Group equivalent findings across locations while preserving distinct findings."""
+    if findings is None:
+        return []
+
+    groups = {}
+    for finding in findings:
+        identity = _consolidation_identity(finding)
+        if identity not in groups:
+            groups[identity] = []
+        groups[identity].append(finding)
+
+    consolidated = []
+    for group in groups.values():
+        if len(group) == 1:
+            consolidated.append(group[0])
+        else:
+            representative = group[0]
+            representative.locations = [
+                (f.relative_path, f.location) for f in group
+            ]
+            consolidated.append(representative)
+
+    return consolidated
+
+
 def collect_findings(source_text, file_info):
     """Collect and deduplicate the normalized findings for one file."""
     raw_findings = collect_raw_findings(source_text, file_info)
@@ -144,4 +183,4 @@ def scan(config: ScanConfig, progress_callback=None) -> list[Finding]:
             findings.extend(collect_findings(handle.read(), file_info))
     if progress_callback is not None:
         progress_callback("preparing")
-    return findings
+    return consolidate_findings(deduplicate_findings(findings))

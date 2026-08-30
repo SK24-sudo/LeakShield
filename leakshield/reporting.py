@@ -66,6 +66,23 @@ def _format_location(finding):
     return f"{relative_path}:{line}:{column}"
 
 
+def _format_locations(finding):
+    """Return formatted location strings for all consolidated locations."""
+    locations = getattr(finding, "locations", None)
+    if not locations:
+        return [_format_location(finding)]
+
+    formatted = []
+    for relative_path, location in locations:
+        line = ""
+        column = ""
+        if isinstance(location, (list, tuple)) and len(location) >= 2:
+            line = str(location[0])
+            column = str(location[1])
+        formatted.append(f"{relative_path}:{line}:{column}")
+    return formatted
+
+
 _HEADER_DIVIDER = "=" * 60
 _SECTION_DIVIDER = "-" * 60
 
@@ -136,7 +153,13 @@ def format_result_cli(findings: list) -> str:
     for finding in findings:
         lines.append(_SECTION_DIVIDER)
         lines.append("")
-        lines.append(f"Location: {_format_location(finding)}")
+        locations = _format_locations(finding)
+        if len(locations) > 1:
+            lines.append("Locations:")
+            for location in locations:
+                lines.append(f"  {location}")
+        else:
+            lines.append(f"Location: {locations[0]}")
         what, why, action = _describe_finding(finding)
         lines.append(f"What: {what}")
         lines.append("")
@@ -198,7 +221,13 @@ def format_pre_commit_result_cli(findings: list) -> str:
     for finding in findings:
         lines.append(_SECTION_DIVIDER)
         lines.append("")
-        lines.append(f"Location: {_format_location(finding)}")
+        locations = _format_locations(finding)
+        if len(locations) > 1:
+            lines.append("Locations:")
+            for location in locations:
+                lines.append(f"  {location}")
+        else:
+            lines.append(f"Location: {locations[0]}")
         what, why, action = _describe_finding(finding)
         lines.append(f"What: {what}")
         lines.append("")
@@ -258,19 +287,24 @@ def findings_to_json(findings: list) -> str:
     """Return a JSON string for the provided Finding objects."""
     payload = []
     for finding in findings:
-        payload.append(
-            {
-                "finding_type": finding.finding_type,
-                "relative_path": finding.relative_path,
-                "location": list(finding.location),
-                "candidate_value": finding.candidate_value,
-                "detector_id": finding.detector_id,
-                "evidence": finding.evidence,
-                "confidence": finding.confidence,
-                "severity": finding.severity,
-                "risk": finding.risk,
-            }
-        )
+        entry = {
+            "finding_type": finding.finding_type,
+            "relative_path": finding.relative_path,
+            "location": list(finding.location),
+            "candidate_value": finding.candidate_value,
+            "detector_id": finding.detector_id,
+            "evidence": finding.evidence,
+            "confidence": finding.confidence,
+            "severity": finding.severity,
+            "risk": finding.risk,
+        }
+        locations = getattr(finding, "locations", None)
+        if locations:
+            entry["locations"] = [
+                {"relative_path": path, "location": list(loc)}
+                for path, loc in locations
+            ]
+        payload.append(entry)
     return json.dumps(payload, indent=2)
 
 
@@ -310,7 +344,8 @@ def findings_to_html(findings: list, target: str = "") -> str:
         finding_cards = []
         for finding in findings:
             what, why, action = _describe_finding(finding)
-            location_str = _format_location(finding)
+            locations = _format_locations(finding)
+            location_str = locations[0] if locations else ""
             finding_type_val = getattr(finding, "finding_type", "unknown")
             sev_val = getattr(finding, "severity", "medium") or "medium"
             conf_val = getattr(finding, "confidence", "medium") or "medium"
@@ -322,6 +357,10 @@ def findings_to_html(findings: list, target: str = "") -> str:
                 for k, v in sorted(finding.evidence.items()):
                     evidence_items.append(f'<span class="evidence-tag"><code>{escape(str(k))}={escape(str(v))}</code></span>')
             evidence_html = " ".join(evidence_items) if evidence_items else '<span class="evidence-tag"><code>none</code></span>'
+
+            locations_html = ""
+            if len(locations) > 1:
+                locations_html = f'<div class="detail-row"><span class="detail-label">Locations:</span><span class="detail-value">{" ".join(["<code>" + escape(loc) + "</code>" for loc in locations])}</span></div>'
 
             card = f"""        <article class="finding-card">
             <header class="card-header">
@@ -336,6 +375,7 @@ def findings_to_html(findings: list, target: str = "") -> str:
                 </div>
             </header>
             <div class="card-body">
+                {locations_html}
                 <div class="detail-row">
                     <span class="detail-label">Location:</span>
                     <span class="detail-value"><code>{escape(location_str)}</code></span>
