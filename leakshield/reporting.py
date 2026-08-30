@@ -74,7 +74,7 @@ def format_findings_cli(findings: list) -> str:
     total = len(findings)
     lines = []
     if total == 0:
-        lines.append("No supported credential or secret patterns detected.")
+        lines.append("No supported security patterns detected.")
         lines.append("")
         lines.append("LeakShield did not find any supported patterns in the files it analyzed.")
         lines.append("A clean scan is not a guarantee that the repository contains no secrets.")

@@ -59,8 +59,11 @@ class CliFormatterTests(unittest.TestCase):
 
     def test_zero_findings_output_is_understandable(self):
         result = format_findings_cli([])
-        self.assertIn("No supported credential or secret patterns detected.", result)
+        self.assertIn("No supported security patterns detected.", result)
         self.assertIn("A clean scan is not a guarantee", result)
+        lower = result.lower()
+        self.assertNotIn("repository is secure", lower)
+        self.assertNotIn("no vulnerabilities", lower)
 
     def test_format_findings_cli_includes_location(self):
         finding = _make_finding()
