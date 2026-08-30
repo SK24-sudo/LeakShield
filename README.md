@@ -871,6 +871,12 @@ You need Python itself.
 
 ---
 
+# Reproducible Build
+
+LeakShield provides a deterministic `.pyz` build. See `REPRODUCIBLE_BUILD.md` for the exact build command, artifact location, run instructions, and verification procedure.
+
+---
+
 # How LeakShield Handles Repository Code
 
 LeakShield is designed to treat repository contents as **untrusted input**.
