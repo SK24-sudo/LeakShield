@@ -22,5 +22,5 @@ def main() -> int:
     elif config.output_format == "html":
         print(findings_to_html(reported_findings))
     else:
-        print(format_findings_cli(reported_findings))
+        print(format_findings_cli(reported_findings, target=config.target))
     return 0

@@ -58,12 +58,29 @@ class CliFormatterTests(unittest.TestCase):
         self.assertIsInstance(result, str)
 
     def test_zero_findings_output_is_understandable(self):
-        result = format_findings_cli([])
+        result = format_findings_cli([], target="examples/vulnerable_repo")
+        self.assertIn("LeakShield scan", result)
+        self.assertIn("Target: examples/vulnerable_repo", result)
         self.assertIn("No supported security patterns detected.", result)
         self.assertIn("A clean scan is not a guarantee", result)
         lower = result.lower()
         self.assertNotIn("repository is secure", lower)
         self.assertNotIn("no vulnerabilities", lower)
+
+    def test_cli_output_includes_tool_identity(self):
+        result = format_findings_cli([], target="some/path")
+        self.assertIn("LeakShield scan", result)
+        self.assertIn("Target: some/path", result)
+
+    def test_cli_findings_output_includes_header(self):
+        finding = _make_finding()
+        result = format_findings_cli([finding], target="test/target")
+        self.assertIn("LeakShield scan", result)
+        self.assertIn("Target: test/target", result)
+        self.assertIn("Location:", result)
+        self.assertIn("What:", result)
+        self.assertIn("Why:", result)
+        self.assertIn("Action:", result)
 
     def test_format_findings_cli_includes_location(self):
         finding = _make_finding()

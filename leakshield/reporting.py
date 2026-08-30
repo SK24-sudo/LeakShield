@@ -66,13 +66,17 @@ def _format_location(finding):
     return f"{relative_path}:{line}:{column}"
 
 
-def format_findings_cli(findings: list) -> str:
+def format_findings_cli(findings: list, target: str = "") -> str:
     """Return a human-readable CLI report for the provided redacted Finding objects."""
     if not isinstance(findings, list):
         raise TypeError("findings must be a list")
 
     total = len(findings)
     lines = []
+    lines.append("LeakShield scan")
+    if target:
+        lines.append(f"Target: {target}")
+    lines.append("")
     if total == 0:
         lines.append("No supported security patterns detected.")
         lines.append("")
