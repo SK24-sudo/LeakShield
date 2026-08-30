@@ -17,6 +17,10 @@ from leakshield.reporting import (
 )
 from leakshield.scanner import scan
 
+EXIT_SUCCESS = 0
+EXIT_FINDINGS = 1
+EXIT_ERROR = 2
+
 
 def resolve_target_display(target: str) -> str:
     """Return a resolved path representation for display."""
@@ -80,7 +84,7 @@ def handle_pre_commit(target: str, output_format: str = "cli") -> int:
             )
         else:
             print(f"Target is not a Git repository: {target_path}", file=sys.stderr)
-        return 1
+        return EXIT_ERROR
 
     try:
         repo_root = get_git_root(target_path)
@@ -96,7 +100,7 @@ def handle_pre_commit(target: str, output_format: str = "cli") -> int:
             )
         else:
             print(f"Could not determine Git repository root: {exc}", file=sys.stderr)
-        return 1
+        return EXIT_ERROR
 
     if output_format == "cli":
         print(format_header())
@@ -122,7 +126,7 @@ def handle_pre_commit(target: str, output_format: str = "cli") -> int:
             )
         else:
             print(f"Failed to scan staged changes: {exc}", file=sys.stderr)
-        return 1
+        return EXIT_ERROR
     except Exception as exc:
         if output_format == "cli":
             print()
@@ -134,7 +138,7 @@ def handle_pre_commit(target: str, output_format: str = "cli") -> int:
             )
         else:
             print(f"Unexpected error while scanning staged changes: {exc}", file=sys.stderr)
-        return 1
+        return EXIT_ERROR
 
     reported_findings = [f.redacted_copy() for f in findings]
 
@@ -216,28 +220,28 @@ def main() -> int:
             ))
         else:
             print(f"Configuration error: {exc}", file=sys.stderr)
-        return 1
+        return EXIT_ERROR
 
     if config.output_format == "json":
         try:
             findings = scan(config)
         except Exception as exc:
             print(f"Scan error: {exc}", file=sys.stderr)
-            return 1
+            return EXIT_ERROR
         reported_findings = [finding.redacted_copy() for finding in findings]
         print(findings_to_json(reported_findings))
-        return 0
+        return EXIT_SUCCESS if not reported_findings else EXIT_FINDINGS
 
     if config.output_format == "html":
         try:
             findings = scan(config)
         except Exception as exc:
             print(f"Scan error: {exc}", file=sys.stderr)
-            return 1
+            return EXIT_ERROR
         reported_findings = [finding.redacted_copy() for finding in findings]
         resolved_target = resolve_target_display(config.target)
         print(findings_to_html(reported_findings, target=resolved_target))
-        return 0
+        return EXIT_SUCCESS if not reported_findings else EXIT_FINDINGS
 
     # CLI presentation format
     print(format_header())
@@ -274,16 +278,16 @@ def main() -> int:
             explanation,
             action="Provide a valid repository path and run LeakShield again.",
         ))
-        return 1
+        return EXIT_ERROR
     except Exception as exc:
         print()
         print(format_error_cli(
             f"Scan encountered an error:\n{exc}",
             action="Check target path and permissions, then run LeakShield again.",
         ))
-        return 1
+        return EXIT_ERROR
 
     reported_findings = [finding.redacted_copy() for finding in findings]
     print()
     print(format_result_cli(reported_findings))
-    return 0
+    return EXIT_SUCCESS if not reported_findings else EXIT_FINDINGS

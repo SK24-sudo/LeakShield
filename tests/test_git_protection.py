@@ -256,14 +256,14 @@ class CliGitProtectionIntegrationTests(unittest.TestCase):
         finally:
             sys.argv = original_argv
 
-    def test_cli_pre_commit_on_non_git_target_returns_one(self):
+    def test_cli_pre_commit_on_non_git_target_returns_two(self):
         non_git = tempfile.mkdtemp()
         try:
             original_argv = sys.argv[:]
             try:
                 sys.argv = ["leakshield", "pre-commit", non_git]
                 exit_code = cli.main()
-                self.assertEqual(exit_code, 1)
+                self.assertEqual(exit_code, 2)
             finally:
                 sys.argv = original_argv
         finally:

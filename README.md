@@ -871,6 +871,12 @@ You need Python itself.
 
 ---
 
+# Package Killer
+
+LeakShield explains its zero-dependency engineering trade-offs in `PACKAGE_KILLER.md`. That document covers concrete capability-by-capability comparisons between reasonable external packages and the standard-library implementations LeakShield actually uses.
+
+---
+
 # Reproducible Build
 
 LeakShield provides a deterministic `.pyz` build. See `REPRODUCIBLE_BUILD.md` for the exact build command, artifact location, run instructions, and verification procedure.
@@ -1069,6 +1075,38 @@ python -m leakshield pre-commit
 
 ```powershell
 python -m unittest discover -s tests -v
+```
+
+---
+
+# Exit Codes
+
+LeakShield uses explicit exit codes so CI/CD pipelines and scripts can distinguish between successful scans with findings and operational failures.
+
+| Code | Meaning                                                      |
+| ---- | ------------------------------------------------------------- |
+| 0    | Scan completed successfully with no findings                  |
+| 1    | Scan completed successfully and findings were detected        |
+| 2    | Scan could not complete because of an operational/configuration error |
+
+Important distinction for automation:
+
+```text
+exit 1 does NOT mean LeakShield itself failed.
+It means the scan found security issues that should be reviewed.
+```
+
+Examples:
+
+```powershell
+python -m leakshield examples\clean_repo
+# exit 0
+
+python -m leakshield examples\vulnerable_repo
+# exit 1
+
+python -m leakshield .\does-not-exist
+# exit 2
 ```
 
 ---

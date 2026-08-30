@@ -1,8 +1,11 @@
+import subprocess
 import sys
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from leakshield import cli
+from leakshield.config import ConfigurationError, ScanConfig
 from leakshield.findings import Finding, RawFinding
 
 
@@ -36,14 +39,14 @@ class CliMainTests(unittest.TestCase):
         finally:
             sys.argv = original_argv
 
-    def test_main_with_findings_displays_results_and_returns_zero(self):
+    def test_main_with_findings_returns_one(self):
         original_argv = sys.argv[:]
         finding = self._make_finding()
         try:
             sys.argv = ["leakshield", "sample_project"]
             with patch("leakshield.cli.scan", return_value=[finding]) as mock_scan:
                 result = cli.main()
-                self.assertEqual(result, 0)
+                self.assertEqual(result, 1)
                 mock_scan.assert_called_once()
         finally:
             sys.argv = original_argv
@@ -68,7 +71,7 @@ class CliMainTests(unittest.TestCase):
             sys.argv = ["leakshield", "non_existent_folder_xyz"]
             with patch("leakshield.cli.scan", side_effect=DiscoveryError("Unable to resolve discovery target.")):
                 result = cli.main()
-                self.assertEqual(result, 1)
+                self.assertEqual(result, 2)
         finally:
             sys.argv = original_argv
 
@@ -92,7 +95,7 @@ class CliMainTests(unittest.TestCase):
             sys.argv = ["leakshield", "sample_project", "--format", "json"]
             with patch("leakshield.cli.scan", return_value=[finding]):
                 with patch("leakshield.cli.findings_to_json", return_value="json-output") as mock_json:
-                    self.assertEqual(cli.main(), 0)
+                    self.assertEqual(cli.main(), 1)
 
             reported = mock_json.call_args.args[0][0]
             self.assertIsNot(reported, finding)
@@ -116,7 +119,7 @@ class CliMainTests(unittest.TestCase):
             sys.argv = ["leakshield", "sample_project", "--format", "html"]
             with patch("leakshield.cli.scan", return_value=[finding]):
                 with patch("leakshield.cli.findings_to_html", return_value="html-output") as mock_html:
-                    self.assertEqual(cli.main(), 0)
+                    self.assertEqual(cli.main(), 1)
 
             reported = mock_html.call_args.args[0][0]
             self.assertIsNot(reported, finding)
@@ -132,6 +135,68 @@ class CliMainTests(unittest.TestCase):
             self.assertIsNotNone(finding.raw_finding)
         finally:
             sys.argv = original_argv
+
+    def test_main_configuration_error_returns_two(self):
+        original_argv = sys.argv[:]
+        try:
+            sys.argv = ["leakshield", ""]
+            result = cli.main()
+            self.assertEqual(result, 2)
+        finally:
+            sys.argv = original_argv
+
+    def test_main_json_format_with_findings_returns_one(self):
+        original_argv = sys.argv[:]
+        finding = self._make_finding()
+        try:
+            sys.argv = ["leakshield", "sample_project", "--format", "json"]
+            with patch("leakshield.cli.scan", return_value=[finding]):
+                with patch("leakshield.cli.findings_to_json", return_value="json-output"):
+                    result = cli.main()
+                    self.assertEqual(result, 1)
+        finally:
+            sys.argv = original_argv
+
+    def test_main_html_format_with_findings_returns_one(self):
+        original_argv = sys.argv[:]
+        finding = self._make_finding()
+        try:
+            sys.argv = ["leakshield", "sample_project", "--format", "html"]
+            with patch("leakshield.cli.scan", return_value=[finding]):
+                with patch("leakshield.cli.findings_to_html", return_value="html-output"):
+                    result = cli.main()
+                    self.assertEqual(result, 1)
+        finally:
+            sys.argv = original_argv
+
+    def test_process_level_exit_code_clean_scan_returns_zero(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        clean_target = repo_root / "examples" / "clean_repo"
+        result = subprocess.run(
+            [sys.executable, "-m", "leakshield", str(clean_target)],
+            cwd=str(repo_root),
+            capture_output=True,
+        )
+        self.assertEqual(result.returncode, 0)
+
+    def test_process_level_exit_code_findings_returns_one(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        vulnerable_target = repo_root / "examples" / "vulnerable_repo"
+        result = subprocess.run(
+            [sys.executable, "-m", "leakshield", str(vulnerable_target)],
+            cwd=str(repo_root),
+            capture_output=True,
+        )
+        self.assertEqual(result.returncode, 1)
+
+    def test_process_level_exit_code_invalid_target_returns_two(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        result = subprocess.run(
+            [sys.executable, "-m", "leakshield", "does_not_exist_xyz"],
+            cwd=str(repo_root),
+            capture_output=True,
+        )
+        self.assertEqual(result.returncode, 2)
 
 
 if __name__ == "__main__":

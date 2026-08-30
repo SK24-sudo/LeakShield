@@ -1,5 +1,11 @@
 # LeakShield Project State
 
+Priority F4 — CI Exit Codes
+STATUS: COMPLETE
+
+Priority F3 — Package Killer
+STATUS: COMPLETE
+
 Last Completed Phase: Priority D - Git Pre-Commit Protection (complete)
 
 Current Phase: Priority D - Git Pre-Commit Protection (completed)
