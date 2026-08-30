@@ -241,26 +241,27 @@ The implementation uses Python standard-library modules only. The repository doe
 
 ```text
 LeakShield/
-├── leakshield/
-│   ├── ast_security.py
-│   ├── cli.py
-│   ├── config.py
-│   ├── discovery.py
-│   ├── findings.py
-│   ├── reporting.py
-│   ├── scanner.py
-│   ├── secrets.py
-│   ├── __init__.py
-│   └── __main__.py
-├── tests/
-├── examples/
-│   └── vulnerable_repo/
-├── PROJECT_STATE.md
-├── STDLIB.md
-├── THREAT_MODEL.md
-├── deps-proof.txt
-├── .zero-dep.toml
-└── README.md
+|-- leakshield/
+|   |-- ast_security.py
+|   |-- cli.py
+|   |-- config.py
+|   |-- discovery.py
+|   |-- findings.py
+|   |-- reporting.py
+|   |-- scanner.py
+|   |-- secrets.py
+|   |-- __init__.py
+|   `-- __main__.py
+|-- tests/
+|-- examples/
+|   |-- clean_repo/
+|   `-- vulnerable_repo/
+|-- PROJECT_STATE.md
+|-- STDLIB.md
+|-- THREAT_MODEL.md
+|-- deps-proof.txt
+|-- .zero-dep.toml
+`-- README.md
 ```
 
 ## Testing
@@ -287,7 +288,7 @@ The regression suite covers:
 * HTML reporting
 * Deterministic scanning
 
-The full regression suite passes with **236 tests**.
+The full regression suite passes with **254 tests**.
 
 ## Limitations
 
@@ -329,8 +330,7 @@ Phase 7A is complete.
 Phase 7B is complete.
 
 Phase 7C demo verification is complete. The CLI, JSON, and HTML paths have
-been verified successfully, and the full regression suite passes with
-**236/236 tests**.
+been verified successfully, and the full regression suite passes with **254/254 tests**.
 
 See [`PROJECT_STATE.md`](PROJECT_STATE.md) for the authoritative repository state and phase history.
 
