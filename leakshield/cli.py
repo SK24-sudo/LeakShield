@@ -142,7 +142,7 @@ def handle_pre_commit(target: str, output_format: str = "cli") -> int:
         print(findings_to_json(reported_findings))
         return 1 if reported_findings else 0
     elif output_format == "html":
-        print(findings_to_html(reported_findings))
+        print(findings_to_html(reported_findings, target=f"Staged changes ({repo_root})"))
         return 1 if reported_findings else 0
 
     print()
@@ -188,12 +188,19 @@ def main() -> int:
         elif subcommand == "pre-commit":
             return handle_pre_commit(target, output_format=output_format)
 
-    parser = argparse.ArgumentParser(prog="leakshield")
-    parser.add_argument("target")
+    parser = argparse.ArgumentParser(
+        prog="leakshield",
+        description="Local, zero-dependency repository security auditor.",
+    )
+    parser.add_argument(
+        "target",
+        help="path to repository or directory to scan",
+    )
     parser.add_argument(
         "--format",
         choices=("cli", "json", "html"),
         default="cli",
+        help="output format (cli: developer action, json: machine automation, html: security review report)",
     )
     args = parser.parse_args()
 
@@ -228,7 +235,8 @@ def main() -> int:
             print(f"Scan error: {exc}", file=sys.stderr)
             return 1
         reported_findings = [finding.redacted_copy() for finding in findings]
-        print(findings_to_html(reported_findings))
+        resolved_target = resolve_target_display(config.target)
+        print(findings_to_html(reported_findings, target=resolved_target))
         return 0
 
     # CLI presentation format

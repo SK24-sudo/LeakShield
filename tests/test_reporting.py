@@ -2,7 +2,7 @@ import json
 import unittest
 
 from leakshield.findings import Finding, RawFinding
-from leakshield.reporting import findings_to_json, format_findings_cli
+from leakshield.reporting import findings_to_html, findings_to_json, format_findings_cli
 
 
 def _make_finding(finding_type="credential-assignment", candidate_value="super-secret-key", evidence=None):
@@ -24,6 +24,12 @@ def _make_finding(finding_type="credential-assignment", candidate_value="super-s
 
 
 class JsonReportingTests(unittest.TestCase):
+    def test_empty_findings_to_json_returns_empty_array(self):
+        result = findings_to_json([])
+        self.assertEqual(result, "[]")
+        parsed = json.loads(result)
+        self.assertEqual(parsed, [])
+
     def test_findings_to_json_serializes_redacted_finding_fields(self):
         raw = RawFinding(
             finding_type="credential-assignment",
@@ -39,17 +45,126 @@ class JsonReportingTests(unittest.TestCase):
         finding.risk = "high"
 
         redacted = finding.redacted_copy()
-        payload = json.loads(findings_to_json([redacted]))
+        raw_json = findings_to_json([redacted])
+        payload = json.loads(raw_json)
 
         self.assertEqual(len(payload), 1)
         item = payload[0]
-        self.assertEqual(item["detector_id"], "pattern-secret")
-        self.assertEqual(item["severity"], "high")
-        self.assertEqual(item["confidence"], "high")
+        self.assertEqual(item["finding_type"], "credential-assignment")
         self.assertEqual(item["relative_path"], "src/example.py")
+        self.assertEqual(item["location"], [12, 3])
+        self.assertEqual(item["candidate_value"], "[REDACTED]")
+        self.assertEqual(item["detector_id"], "pattern-secret")
         self.assertEqual(item["evidence"]["pattern"], "credential-assignment")
         self.assertEqual(item["evidence"]["credential_name"], "[REDACTED]")
-        self.assertNotIn("super-secret-key", json.dumps(item))
+        self.assertEqual(item["confidence"], "high")
+        self.assertEqual(item["severity"], "high")
+        self.assertEqual(item["risk"], "high")
+        self.assertNotIn("super-secret-key", raw_json)
+
+    def test_findings_to_json_has_no_terminal_decorations(self):
+        finding = _make_finding()
+        raw_json = findings_to_json([finding.redacted_copy()])
+        self.assertTrue(raw_json.startswith("["))
+        self.assertTrue(raw_json.endswith("]"))
+        self.assertNotIn("LEAKSHIELD", raw_json)
+        self.assertNotIn("Discovering", raw_json)
+        self.assertNotIn("✓", raw_json)
+        self.assertNotIn("⚠", raw_json)
+
+
+class HtmlReportingTests(unittest.TestCase):
+    def test_findings_to_html_returns_valid_html_string(self):
+        result = findings_to_html([])
+        self.assertIsInstance(result, str)
+        self.assertTrue(result.startswith("<!DOCTYPE html>"))
+        self.assertIn("<html lang=\"en\">", result)
+        self.assertIn("</html>", result)
+
+    def test_zero_findings_html_is_accurate_and_does_not_overstate_security(self):
+        result = findings_to_html([], target="my/project")
+        self.assertIn("No potential security findings found", result)
+        self.assertIn("No supported LeakShield findings were detected in the analyzed files.", result)
+        self.assertIn("my/project", result)
+        lower = result.lower()
+        self.assertNotIn("repository is secure", lower)
+        self.assertNotIn("no vulnerabilities exist", lower)
+
+    def test_findings_html_displays_summary_metrics_and_breakdowns(self):
+        findings = [
+            _make_finding(finding_type="credential-assignment"),
+            _make_finding(finding_type="eval"),
+        ]
+        findings[0].severity = "high"
+        findings[0].confidence = "high"
+        findings[0].risk = "high"
+        findings[1].severity = "medium"
+        findings[1].confidence = "medium"
+        findings[1].risk = "medium"
+
+        result = findings_to_html(findings, target="src/app")
+        self.assertIn("Total Findings", result)
+        self.assertIn('<div class="stat-value">2</div>', result)
+        self.assertIn("Severity Breakdown", result)
+        self.assertIn("Confidence Breakdown", result)
+        self.assertIn("Risk Breakdown", result)
+        self.assertIn("src/app", result)
+
+    def test_findings_html_displays_finding_cards_with_badges_and_actions(self):
+        finding = _make_finding(finding_type="credential-assignment")
+        finding.severity = "high"
+        finding.confidence = "high"
+        finding.risk = "high"
+
+        result = findings_to_html([finding.redacted_copy()])
+        self.assertIn("Hardcoded credential assignment", result)
+        self.assertIn("HIGH SEVERITY", result)
+        self.assertIn("High Confidence", result)
+        self.assertIn("HIGH RISK", result)
+        self.assertIn("src/example.py:12:3", result)
+        self.assertIn("Move the credential outside source code", result)
+
+    def test_findings_html_is_self_contained_with_no_external_assets(self):
+        finding = _make_finding()
+        result = findings_to_html([finding.redacted_copy()])
+        self.assertNotIn("http://", result)
+        self.assertNotIn("https://", result)
+        self.assertNotIn("<script", result)
+        self.assertNotIn('<link rel="stylesheet"', result)
+        self.assertIn("<style>", result)
+
+    def test_findings_html_escapes_dynamic_content(self):
+        raw = RawFinding(
+            finding_type="credential-assignment",
+            relative_path="src/<script>alert(1)</script>.py",
+            location=(1, 1),
+            candidate_value="[REDACTED]",
+            detector_id="detector&special",
+            evidence={"tag": "<b>bold</b>"},
+        )
+        finding = Finding(raw)
+        finding.confidence = "high"
+        finding.severity = "high"
+        finding.risk = "high"
+
+        result = findings_to_html([finding], target="<evil>target</evil>")
+        self.assertNotIn("<script>alert(1)</script>", result)
+        self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", result)
+        self.assertNotIn("<evil>", result)
+        self.assertIn("&lt;evil&gt;target&lt;/evil&gt;", result)
+        self.assertIn("detector&amp;special", result)
+        self.assertIn("&lt;b&gt;bold&lt;/b&gt;", result)
+
+    def test_findings_html_redacts_secrets_and_does_not_leak_raw_secret(self):
+        finding = _make_finding(candidate_value="RAW_SUPER_SECRET_TOKEN_999")
+        redacted = finding.redacted_copy()
+        result = findings_to_html([redacted])
+        self.assertNotIn("RAW_SUPER_SECRET_TOKEN_999", result)
+        self.assertIn("[REDACTED]", result)
+
+    def test_findings_to_html_requires_list(self):
+        with self.assertRaises(TypeError):
+            findings_to_html(None)
 
 
 class CliFormatterTests(unittest.TestCase):

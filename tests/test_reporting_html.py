@@ -12,7 +12,8 @@ class HtmlReportingTests(unittest.TestCase):
         self.assertIn("<html", html)
         self.assertIn('<meta charset="UTF-8">', html)
         self.assertIn("LeakShield Report", html)
-        self.assertIn("Total Findings: 0", html)
+        self.assertIn("Total Findings", html)
+        self.assertIn('<div class="stat-value">0</div>', html)
 
     def test_findings_to_html_renders_finding_metadata(self):
         raw = RawFinding(
