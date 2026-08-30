@@ -1089,8 +1089,6 @@ LeakShield/
 ├── PROJECT_STATE.md
 ├── STDLIB.md
 ├── THREAT_MODEL.md
-├── deps-proof.txt
-├── .zero-dep.toml
 └── README.md
 ```
 
