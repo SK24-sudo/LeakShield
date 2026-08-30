@@ -1,5 +1,8 @@
 # LeakShield Project State
 
+Priority F5 — .gitignore Handling
+STATUS: COMPLETE
+
 Priority F4 — CI Exit Codes
 STATUS: COMPLETE
 

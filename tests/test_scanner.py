@@ -1,3 +1,4 @@
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -228,6 +229,45 @@ class Phase4CDeduplicationTests(unittest.TestCase):
         self.assertIsNotNone(normalized.confidence)
         self.assertIsNotNone(normalized.severity)
         self.assertIsNotNone(normalized.risk)
+
+
+class IgnoreDirectoryIntegrationTests(unittest.TestCase):
+    def test_files_in_ignored_directories_do_not_produce_findings(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            (root / "src" / "app.py").write_text('password = "src_secret"\n', encoding="utf-8")
+            (root / "dist").mkdir()
+            (root / "dist" / "bundle.js").write_text('password = "dist_secret"\n', encoding="utf-8")
+            (root / "build").mkdir()
+            (root / "build" / "output.css").write_text("body { color: red; }\n", encoding="utf-8")
+            (root / ".git").mkdir()
+            (root / ".git" / "config").write_text("[core]\n", encoding="utf-8")
+            (root / "node_modules").mkdir()
+            (root / "node_modules" / "index.js").write_text('password = "nm_secret"\n', encoding="utf-8")
+
+            findings = scan(ScanConfig(str(root)))
+            relative_paths = [finding.relative_path for finding in findings]
+
+            self.assertGreaterEqual(len(findings), 1)
+            for relative_path in relative_paths:
+                self.assertNotIn(relative_path, ["dist/bundle.js", "build/output.css", ".git/config", "node_modules/index.js"])
+
+    def test_files_in_supported_source_do_produce_findings(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            (root / "src" / "app.py").write_text('password = "src_secret"\n', encoding="utf-8")
+
+            findings = scan(ScanConfig(str(root)))
+
+            self.assertGreaterEqual(len(findings), 1)
+            self.assertTrue(
+                any(finding.relative_path == "src/app.py" for finding in findings)
+            )
+            self.assertTrue(
+                any(finding.finding_type == "credential-assignment" for finding in findings)
+            )
 
 
 if __name__ == "__main__":

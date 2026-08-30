@@ -877,6 +877,31 @@ LeakShield explains its zero-dependency engineering trade-offs in `PACKAGE_KILLE
 
 ---
 
+# Practical Ignore Behavior
+
+LeakShield ignores common repository-noise directories and files during scanning, including:
+
+```text
+.git/
+node_modules/
+dist/
+build/
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.idea/
+.vscode/
+```
+
+This is practical repository-noise handling, not a complete implementation of Git's ignore specification.
+
+---
+
 # Reproducible Build
 
 LeakShield provides a deterministic `.pyz` build. See `REPRODUCIBLE_BUILD.md` for the exact build command, artifact location, run instructions, and verification procedure.

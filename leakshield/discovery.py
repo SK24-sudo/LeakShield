@@ -160,6 +160,8 @@ def discover(target):
                     continue
 
                 if entry.is_dir():
+                    if _is_default_ignored_path(root, entry):
+                        continue
                     pending.append(entry)
                     continue
 
@@ -195,6 +197,8 @@ DEFAULT_IGNORE_PATTERNS = (
     ".mypy_cache/",
     ".idea/",
     ".vscode/",
+    "dist/",
+    "build/",
 )
 
 
@@ -206,6 +210,23 @@ def _normalize_ignore_path(path):
         normalized = normalized[2:]
 
     return normalized
+
+
+def _is_default_ignored_path(root, path):
+    """Return whether a filesystem path matches the default ignore patterns."""
+    relative_path = _normalize_ignore_path(path.relative_to(root))
+    if path.is_dir():
+        relative_path = relative_path + "/"
+
+    file_info = FileInfo(
+        path=path,
+        relative_path=relative_path,
+        name=path.name,
+        extension=path.suffix.lower(),
+        size=0,
+        classification="",
+    )
+    return is_ignored(file_info)
 
 
 def is_ignored(file_info, custom_patterns=()):
