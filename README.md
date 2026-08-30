@@ -102,6 +102,16 @@ Detection uses Python AST structure where applicable rather than relying only on
 
 The detector set is intentionally limited to the implemented rules. LeakShield does not attempt to detect every dangerous Python construct.
 
+## Interpreting Finding Metadata
+
+LeakShield reports confidence, severity, and risk as distinct fields:
+
+* **Confidence** describes how likely the finding is correctly identified. High confidence means the scanner has strong supporting evidence that the material matches the detected condition.
+* **Severity** describes how dangerous the condition would be if it is genuinely sensitive or valid. High severity does not establish that a detected credential is active.
+* **Risk** is the scanner's final prioritization derived from confidence and severity. High risk must not be interpreted as proof that a credential is live, active, or exploitable.
+
+LeakShield performs static analysis only, so detected material alone cannot establish credential liveness. Test fixtures, examples, and other sample material can therefore still legitimately be detected.
+
 ## Scan Pipeline
 
 A scan follows a deterministic processing flow:
@@ -129,6 +139,9 @@ Confidence / severity / risk
   |
   v
 Exact deduplication
+  |
+  v
+Redaction
   |
   v
 Reporting
@@ -168,7 +181,7 @@ The redacted representation:
 * Does not mutate the original internal finding.
 * Is deterministic and idempotent.
 
-The current reporting layer does not yet define or enforce a final output-redaction contract. Integration of redaction with external reporting is explicitly deferred future work.
+For normal CLI JSON and HTML output, `cli.main()` creates redacted `Finding` copies after scanning and deduplication and before reporter dispatch. Raw candidate material remains internal to the `Finding` model and is not passed to the normal CLI JSON or HTML reporting path.
 
 ## Determinism
 
@@ -262,7 +275,7 @@ It does **not** currently:
 
 Static detection can produce both false positives and false negatives. The detector set is intentionally limited to the project's implemented secret and AST security rules.
 
-The internal redaction mechanism exists, but final output-redaction integration is not currently defined or enforced by the reporting boundary.
+Normal CLI JSON and HTML reporting receives redacted `Finding` copies. This CLI boundary does not imply that direct calls to a reporting formatter redact their input.
 
 ## Non-Goals
 

@@ -53,7 +53,7 @@ No Phase 4C redesign is required.
 
 ## Phase 4D — Redaction
 
-STATUS: IMPLEMENTED / CONTRACT-TESTED / OUTPUT INTEGRATION DEFERRED
+STATUS: IMPLEMENTED / CONTRACT-TESTED / CLI JSON AND HTML OUTPUT INTEGRATED
 
 Implemented:
 
@@ -76,49 +76,27 @@ Validation:
 IMPORTANT DISTINCTION:
 
 Redaction implementation is complete for the currently defined repository boundary.
-Production output integration is not complete because the repository currently has:
+Normal CLI output integration is complete. The active path is:
 
-- no `ScanResult` implementation
-- no defined external result model
-- no active reporting/output consumer
-- empty `reporting.py`
-- no production caller requiring a redacted final result
+`scan` -> normalization/deduplication -> CLI redaction -> JSON/HTML reporting
 
-Therefore, redaction is not currently integrated into an external reporting path.
+`cli.main()` creates redacted `Finding` copies after `scan()` returns and passes those copies to the JSON and HTML reporters. Raw candidate material remains available on internal findings for exact deduplication and is not passed from the normal CLI path to those reporters. `reporting.py` implements the JSON and HTML formatters; direct formatter calls receive the input supplied by their caller and do not automatically redact it.
 
-## Future Work — Phase 4D Output Integration
+## Phase 4D CLI Output Integration
 
-The remaining work is explicitly future work and should not be treated as a current Phase 4 defect:
-
-1. Define the external output/result contract.
-   - Decide whether the future boundary uses `ScanResult`, a redacted `Finding` list, or another explicitly approved result model.
-2. Define ownership of the redaction boundary.
-   - Redaction must occur after deduplication.
-   - Reporters must receive only the redacted representation.
-   - Internal `Finding` objects must remain available internally when required by the architecture.
-3. Implement the minimum output boundary once reporting/output requirements actually exist.
-4. Add integration tests proving:
-   - deduplication occurs before redaction
-   - raw secrets do not reach external output
-   - redacted output is deterministic
-   - original internal findings remain unchanged
-   - reporters receive only redacted representations
-
-Do not create this future architecture during the current Phase 4 work.
+The normal CLI JSON and HTML output boundary is complete. Focused CLI regression tests verify that reporters receive redacted copies and that original scanner findings remain unchanged.
 
 ## Remaining Work
 
-- Future: define external result/output contract
-- Future: implement `ScanResult` or approved equivalent if required
-- Future: integrate redaction immediately after deduplication and before reporting
-- Future: implement reporting/output layer
-- Future: add end-to-end output redaction tests
+- Normal CLI JSON and HTML output integration is complete.
+- Redaction occurs after deduplication and before reporting.
+- Focused CLI regression coverage verifies the redacted reporting boundary.
 
 ## Phase 4 Overall Status
 
-Status: COMPLETE FOR CURRENTLY DEFINED REPOSITORY SCOPE / FUTURE OUTPUT INTEGRATION DEFERRED
+Status: COMPLETE FOR CURRENTLY DEFINED REPOSITORY SCOPE / NORMAL CLI OUTPUT INTEGRATION COMPLETE
 
-Phase 4 detection-to-redaction processing is complete through the currently defined repository boundary. Phase 4D redaction is implemented and contract-tested. Future work remains only at the undefined external output/reporting boundary: define the result contract, integrate redaction into that boundary, and add output-safety integration tests. No `ScanResult` or reporting architecture should be invented until that future boundary is explicitly designed.
+Phase 4 detection-to-redaction processing is complete through the normal CLI reporting boundary. Phase 4D redaction is implemented and contract-tested; CLI JSON and HTML reporting receives redacted `Finding` copies after scanning and deduplication.
 
 ## Frozen Phases
 
@@ -132,7 +110,7 @@ Phase 4 detection-to-redaction processing is complete through the currently defi
 - Phase 4A - Context Analysis
 - Phase 4B - Finding Normalization / Confidence / Severity / Risk
 - Phase 4C - Deduplication
-- Phase 4D - Redaction (implementation boundary complete; external integration deferred)
+- Phase 4D - Redaction (implementation and normal CLI JSON/HTML output integration complete)
 - Phase 5A - CLI output integration (complete / frozen)
 - Phase 5B - JSON output integration (complete / frozen)
 - Phase 5C - HTML output integration (complete / frozen)
@@ -192,4 +170,4 @@ Fixture and demo-target distinction:
 - Do not create a plugin framework.
 - Keep Phase 3B implementation inside the approved existing module boundaries.
 
-Next Phase After Phase 4D: Future output/reporting integration work only, after an explicit result-contract decision.
+Phase 4D output integration is complete for the normal CLI JSON and HTML paths.
