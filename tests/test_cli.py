@@ -36,6 +36,42 @@ class CliMainTests(unittest.TestCase):
         finally:
             sys.argv = original_argv
 
+    def test_main_with_findings_displays_results_and_returns_zero(self):
+        original_argv = sys.argv[:]
+        finding = self._make_finding()
+        try:
+            sys.argv = ["leakshield", "sample_project"]
+            with patch("leakshield.cli.scan", return_value=[finding]) as mock_scan:
+                result = cli.main()
+                self.assertEqual(result, 0)
+                mock_scan.assert_called_once()
+        finally:
+            sys.argv = original_argv
+
+    def test_main_passes_progress_callback_to_scan(self):
+        original_argv = sys.argv[:]
+        try:
+            sys.argv = ["leakshield", "sample_project"]
+            with patch("leakshield.cli.scan", return_value=[]) as mock_scan:
+                cli.main()
+                mock_scan.assert_called_once()
+                self.assertIn("progress_callback", mock_scan.call_args.kwargs)
+                callback = mock_scan.call_args.kwargs["progress_callback"]
+                self.assertTrue(callable(callback))
+        finally:
+            sys.argv = original_argv
+
+    def test_main_handles_discovery_error_cleanly(self):
+        original_argv = sys.argv[:]
+        from leakshield.discovery import DiscoveryError
+        try:
+            sys.argv = ["leakshield", "non_existent_folder_xyz"]
+            with patch("leakshield.cli.scan", side_effect=DiscoveryError("Unable to resolve discovery target.")):
+                result = cli.main()
+                self.assertEqual(result, 1)
+        finally:
+            sys.argv = original_argv
+
     def test_main_with_json_format_calls_json_reporter(self):
         original_argv = sys.argv[:]
         try:

@@ -91,6 +91,16 @@ class ScannerDeterminismTests(unittest.TestCase):
 
         self.assertEqual(snapshot(first), snapshot(second))
 
+    def test_scan_calls_progress_callback_at_phase_boundaries(self):
+        target = Path(__file__).resolve().parents[1] / "examples" / "clean_repo"
+        events = []
+
+        def callback(phase):
+            events.append(phase)
+
+        scan(ScanConfig(str(target)), progress_callback=callback)
+        self.assertEqual(events, ["discovering", "analyzing", "preparing"])
+
 
 class Phase4CDeduplicationTests(unittest.TestCase):
     def _make_raw(self, **overrides):

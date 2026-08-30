@@ -66,36 +66,125 @@ def _format_location(finding):
     return f"{relative_path}:{line}:{column}"
 
 
+_HEADER_DIVIDER = "=" * 60
+_SECTION_DIVIDER = "-" * 60
+
+
+def format_header() -> str:
+    """Return the visual header banner for LeakShield."""
+    lines = [
+        _HEADER_DIVIDER,
+        "LEAKSHIELD".center(60).rstrip(),
+        _HEADER_DIVIDER,
+        "",
+        "Local, zero-dependency repository security auditor".center(60).rstrip(),
+        "",
+        "Prevent accidentally shipping secrets and security-sensitive".center(60).rstrip(),
+        "code patterns.".center(60).rstrip(),
+    ]
+    return "\n".join(lines)
+
+
+def format_target_cli(target: str) -> str:
+    """Return the formatted Target section."""
+    lines = [
+        _SECTION_DIVIDER,
+        "Target",
+        _SECTION_DIVIDER,
+        "",
+        str(target),
+    ]
+    return "\n".join(lines)
+
+
+def format_scan_cli() -> str:
+    """Return the formatted Scan header section."""
+    lines = [
+        _SECTION_DIVIDER,
+        "Scan",
+        _SECTION_DIVIDER,
+    ]
+    return "\n".join(lines)
+
+
+def format_result_cli(findings: list) -> str:
+    """Return the formatted Result section for scan findings."""
+    if not isinstance(findings, list):
+        raise TypeError("findings must be a list")
+
+    lines = [
+        _SECTION_DIVIDER,
+        "Result",
+        _SECTION_DIVIDER,
+        "",
+    ]
+
+    total = len(findings)
+    if total == 0:
+        lines.append("✓ No potential security findings found.")
+        lines.append("")
+        lines.append("Scan complete.")
+        return "\n".join(lines)
+
+    finding_word = "finding" if total == 1 else "findings"
+    lines.append(f"⚠ {total} potential security {finding_word} found.")
+    lines.append("")
+    lines.append("Review the findings below and address them before committing")
+    lines.append("security-sensitive code.")
+    lines.append("")
+
+    for finding in findings:
+        lines.append(_SECTION_DIVIDER)
+        lines.append("")
+        lines.append(f"Location: {_format_location(finding)}")
+        what, why, action = _describe_finding(finding)
+        lines.append(f"What: {what}")
+        lines.append("")
+        lines.append("Why:")
+        lines.append(why)
+        lines.append("")
+        lines.append("Action:")
+        lines.append(action)
+        lines.append("")
+
+    lines.append(_SECTION_DIVIDER)
+    lines.append("")
+    lines.append("Scan complete.")
+    return "\n".join(lines)
+
+
+def format_error_cli(explanation: str, action: str = "Provide a valid repository path and run LeakShield again.") -> str:
+    """Return the formatted Result section for an uncompleted scan."""
+    lines = [
+        _SECTION_DIVIDER,
+        "Result",
+        _SECTION_DIVIDER,
+        "",
+        "✗ Scan could not be completed.",
+        "",
+        explanation,
+        "",
+        "Action:",
+        action,
+    ]
+    return "\n".join(lines)
+
+
 def format_findings_cli(findings: list, target: str = "") -> str:
     """Return a human-readable CLI report for the provided redacted Finding objects."""
     if not isinstance(findings, list):
         raise TypeError("findings must be a list")
 
-    total = len(findings)
-    lines = []
-    lines.append("LeakShield scan")
+    sections = [format_header()]
+
     if target:
-        lines.append(f"Target: {target}")
-    lines.append("")
-    if total == 0:
-        lines.append("No supported security patterns detected.")
-        lines.append("")
-        lines.append("LeakShield did not find any supported patterns in the files it analyzed.")
-        lines.append("A clean scan is not a guarantee that the repository contains no secrets.")
-        return "\n".join(lines)
+        sections.append("")
+        sections.append(format_target_cli(target))
 
-    lines.append(f"{total} potential security findings found.")
-    lines.append("")
+    sections.append("")
+    sections.append(format_result_cli(findings))
 
-    for finding in findings:
-        lines.append(f"Location: {_format_location(finding)}")
-        what, why, action = _describe_finding(finding)
-        lines.append(f"What: {what}")
-        lines.append(f"Why: {why}")
-        lines.append(f"Action: {action}")
-        lines.append("")
-
-    return "\n".join(lines)
+    return "\n".join(sections)
 
 
 def findings_to_json(findings: list) -> str:

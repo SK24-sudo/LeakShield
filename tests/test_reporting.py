@@ -59,24 +59,30 @@ class CliFormatterTests(unittest.TestCase):
 
     def test_zero_findings_output_is_understandable(self):
         result = format_findings_cli([], target="examples/vulnerable_repo")
-        self.assertIn("LeakShield scan", result)
-        self.assertIn("Target: examples/vulnerable_repo", result)
-        self.assertIn("No supported security patterns detected.", result)
-        self.assertIn("A clean scan is not a guarantee", result)
+        self.assertIn("LEAKSHIELD", result)
+        self.assertIn("Target", result)
+        self.assertIn("examples/vulnerable_repo", result)
+        self.assertIn("No potential security findings found.", result)
+        self.assertIn("Scan complete.", result)
         lower = result.lower()
         self.assertNotIn("repository is secure", lower)
         self.assertNotIn("no vulnerabilities", lower)
 
     def test_cli_output_includes_tool_identity(self):
         result = format_findings_cli([], target="some/path")
-        self.assertIn("LeakShield scan", result)
-        self.assertIn("Target: some/path", result)
+        self.assertIn("LEAKSHIELD", result)
+        self.assertIn("Local, zero-dependency repository security auditor", result)
+        self.assertIn("Prevent accidentally shipping secrets and security-sensitive", result)
+        self.assertIn("code patterns.", result)
+        self.assertIn("Target", result)
+        self.assertIn("some/path", result)
 
     def test_cli_findings_output_includes_header(self):
         finding = _make_finding()
         result = format_findings_cli([finding], target="test/target")
-        self.assertIn("LeakShield scan", result)
-        self.assertIn("Target: test/target", result)
+        self.assertIn("LEAKSHIELD", result)
+        self.assertIn("Target", result)
+        self.assertIn("test/target", result)
         self.assertIn("Location:", result)
         self.assertIn("What:", result)
         self.assertIn("Why:", result)
@@ -161,6 +167,12 @@ class CliFormatterTests(unittest.TestCase):
         self.assertIn("2 potential security findings found.", result)
         self.assertIn("Hardcoded credential assignment", result)
         self.assertIn("PEM private key", result)
+
+    def test_single_finding_uses_singular_grammar(self):
+        finding = _make_finding(finding_type="credential-assignment")
+        result = format_findings_cli([finding])
+        self.assertIn("1 potential security finding found.", result)
+        self.assertNotIn("1 potential security findings found.", result)
 
     def test_unknown_finding_type_uses_fallback(self):
         finding = _make_finding(

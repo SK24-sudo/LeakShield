@@ -131,11 +131,17 @@ def collect_raw_findings(source_text, file_info):
     return _enrich_with_extension(findings, file_info)
 
 
-def scan(config: ScanConfig) -> list[Finding]:
+def scan(config: ScanConfig, progress_callback=None) -> list[Finding]:
     """Scan the configured target and return the aggregated findings list."""
+    if progress_callback is not None:
+        progress_callback("discovering")
     files = filter_files(discover(config.target), config.ignore_patterns)
+    if progress_callback is not None:
+        progress_callback("analyzing")
     findings = []
     for file_info in files:
         with open(file_info.path, "r", encoding="utf-8", errors="replace") as handle:
             findings.extend(collect_findings(handle.read(), file_info))
+    if progress_callback is not None:
+        progress_callback("preparing")
     return findings
