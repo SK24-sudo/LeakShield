@@ -1,7 +1,7 @@
 import argparse
 
 from leakshield.config import ScanConfig
-from leakshield.reporting import findings_to_html, findings_to_json
+from leakshield.reporting import findings_to_html, findings_to_json, format_findings_cli
 from leakshield.scanner import scan
 
 
@@ -22,5 +22,5 @@ def main() -> int:
     elif config.output_format == "html":
         print(findings_to_html(reported_findings))
     else:
-        print(f"Findings: {len(findings)}")
+        print(format_findings_cli(reported_findings))
     return 0
