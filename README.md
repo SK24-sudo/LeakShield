@@ -767,6 +767,90 @@ It can be useful for:
 
 ---
 
+## Git pre-commit protection
+
+### What it does
+
+LeakShield can automatically inspect staged changes before every Git commit, acting as a local preventive security checkpoint.
+
+### Why it exists
+
+Developers may forget to manually run security scans before committing. The pre-commit hook ensures that sensitive credentials and dangerous code patterns are caught locally before code is committed to Git history.
+
+### Installation
+
+To protect a repository, navigate to it and run:
+
+```powershell
+python -m leakshield install-hook
+```
+
+Or provide the path to the repository you want to protect:
+
+```powershell
+python -m leakshield install-hook <REPOSITORY_PATH>
+```
+
+Installation is an explicit action. LeakShield will **never** silently install hooks or overwrite existing, unrelated pre-commit hooks.
+
+### Normal workflow
+
+```text
+Edit code
+    ↓
+git add <files>
+    ↓
+git commit -m "commit message"
+    ↓
+LeakShield pre-commit hook runs automatically
+    ↓
+┌───────────────────────┬────────────────────────┐
+│ No findings           │ Security findings      │
+│       ↓               │       ↓                │
+│ exit 0                │ non-zero exit          │
+│       ↓               │       ↓                │
+│ Commit allowed        │ Commit blocked         │
+└───────────────────────┴────────────────────────┘
+```
+
+### Finding workflow
+
+When LeakShield blocks a commit due to a security finding:
+
+```text
+1. Review the location and explanation printed in the terminal.
+2. Remove or rotate the hardcoded secret or fix the unsafe pattern.
+3. Stage the fixed files: git add <files>
+4. Run your commit again: git commit -m "commit message"
+5. LeakShield verifies the staged changes and allows the commit.
+```
+
+### How staged scanning works
+
+LeakShield inspects the **staged content** in memory (`git show :<file>`), not the unstaged working-tree files. If you stage a safe placeholder and later modify the working tree, LeakShield checks only what is about to be committed.
+
+### Emergency bypass
+
+If you need to bypass the hook in an emergency, Git provides:
+
+```powershell
+git commit --no-verify
+```
+
+> **Security Note:** Local pre-commit protection is a preventive safeguard, not an absolute security boundary. A clean pre-commit check means no supported LeakShield findings were detected in the staged changes; it does not guarantee that the repository contains no other vulnerabilities.
+
+### Hook uninstallation
+
+To remove the pre-commit protection from a repository:
+
+```powershell
+python -m leakshield uninstall-hook
+```
+
+LeakShield will only remove hooks that it manages, leaving any third-party or custom developer tooling intact.
+
+---
+
 # Zero Dependency
 
 "Zero dependency" does **not** mean that LeakShield requires absolutely nothing.
@@ -955,6 +1039,24 @@ python -m leakshield <REPOSITORY_PATH> --format json
 
 ```powershell
 python -m leakshield <REPOSITORY_PATH> --format html
+```
+
+### Install Git pre-commit hook
+
+```powershell
+python -m leakshield install-hook
+```
+
+### Uninstall Git pre-commit hook
+
+```powershell
+python -m leakshield uninstall-hook
+```
+
+### Run manual pre-commit check on staged changes
+
+```powershell
+python -m leakshield pre-commit
 ```
 
 ### Run the test suite

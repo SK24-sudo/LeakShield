@@ -170,6 +170,73 @@ def format_error_cli(explanation: str, action: str = "Provide a valid repository
     return "\n".join(lines)
 
 
+def format_pre_commit_result_cli(findings: list) -> str:
+    """Return the formatted Result section for pre-commit staged scan."""
+    if not isinstance(findings, list):
+        raise TypeError("findings must be a list")
+
+    lines = [
+        _SECTION_DIVIDER,
+        "Result",
+        _SECTION_DIVIDER,
+        "",
+    ]
+
+    total = len(findings)
+    if total == 0:
+        lines.append("✓ No potential security findings found in staged changes.")
+        lines.append("")
+        lines.append("Commit allowed.")
+        return "\n".join(lines)
+
+    finding_word = "finding" if total == 1 else "findings"
+    lines.append(f"⚠ {total} potential security {finding_word} found in staged changes.")
+    lines.append("")
+    lines.append("Commit blocked.")
+    lines.append("")
+
+    for finding in findings:
+        lines.append(_SECTION_DIVIDER)
+        lines.append("")
+        lines.append(f"Location: {_format_location(finding)}")
+        what, why, action = _describe_finding(finding)
+        lines.append(f"What: {what}")
+        lines.append("")
+        lines.append("Why:")
+        lines.append(why)
+        lines.append("")
+        lines.append("Action:")
+        lines.append(action)
+        lines.append("")
+
+    lines.append(_SECTION_DIVIDER)
+    lines.append("")
+    if total == 1:
+        lines.append("Fix the finding and stage the updated file before committing.")
+    else:
+        lines.append("Fix the findings and stage the updated files before committing.")
+    return "\n".join(lines)
+
+
+def format_pre_commit_error_cli(explanation: str, action: str = "Review the error above and retry.") -> str:
+    """Return the formatted Result section for an uncompleted pre-commit check."""
+    lines = [
+        _SECTION_DIVIDER,
+        "Result",
+        _SECTION_DIVIDER,
+        "",
+        "✗ LeakShield pre-commit check could not complete.",
+        "",
+        "Commit blocked.",
+        "",
+        explanation,
+        "",
+        "Action:",
+        action,
+    ]
+    return "\n".join(lines)
+
+
 def format_findings_cli(findings: list, target: str = "") -> str:
     """Return a human-readable CLI report for the provided redacted Finding objects."""
     if not isinstance(findings, list):

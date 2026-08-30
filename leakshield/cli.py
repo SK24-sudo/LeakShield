@@ -9,6 +9,8 @@ from leakshield.reporting import (
     findings_to_json,
     format_error_cli,
     format_header,
+    format_pre_commit_error_cli,
+    format_pre_commit_result_cli,
     format_result_cli,
     format_scan_cli,
     format_target_cli,
@@ -27,6 +29,127 @@ def resolve_target_display(target: str) -> str:
         return target
 
 
+def handle_install_hook(target: str) -> int:
+    """Handle the install-hook command."""
+    from leakshield.git_protection import install_hook
+
+    success, message = install_hook(target)
+    if success:
+        print(message)
+        print()
+        print("LeakShield will now automatically inspect staged changes before every commit.")
+        print("To bypass in an emergency, use: git commit --no-verify")
+        return 0
+    else:
+        print(message, file=sys.stderr)
+        return 1
+
+
+def handle_uninstall_hook(target: str) -> int:
+    """Handle the uninstall-hook command."""
+    from leakshield.git_protection import uninstall_hook
+
+    success, message = uninstall_hook(target)
+    if success:
+        print(message)
+        return 0
+    else:
+        print(message, file=sys.stderr)
+        return 1
+
+
+def handle_pre_commit(target: str, output_format: str = "cli") -> int:
+    """Handle the pre-commit scan of staged changes."""
+    from leakshield.git_protection import (
+        GitProtectionError,
+        get_git_root,
+        is_git_repository,
+        scan_staged,
+    )
+
+    target_path = Path(target).resolve()
+    if not is_git_repository(target_path):
+        if output_format == "cli":
+            print(format_header())
+            print()
+            print(
+                format_pre_commit_error_cli(
+                    f"Target is not a Git repository:\n{target_path}",
+                    action="Run this command inside a valid Git repository.",
+                )
+            )
+        else:
+            print(f"Target is not a Git repository: {target_path}", file=sys.stderr)
+        return 1
+
+    try:
+        repo_root = get_git_root(target_path)
+    except GitProtectionError as exc:
+        if output_format == "cli":
+            print(format_header())
+            print()
+            print(
+                format_pre_commit_error_cli(
+                    f"Could not determine Git repository root:\n{exc}",
+                    action="Check Git repository status and permissions.",
+                )
+            )
+        else:
+            print(f"Could not determine Git repository root: {exc}", file=sys.stderr)
+        return 1
+
+    if output_format == "cli":
+        print(format_header())
+        print()
+        print(format_target_cli(f"Staged changes ({repo_root})"))
+        print()
+        print(format_scan_cli())
+        print()
+        print("[1/2] Inspecting staged Git changes...")
+
+    try:
+        if output_format == "cli":
+            print("[2/2] Analyzing supported security patterns...")
+        findings = scan_staged(repo_root)
+    except GitProtectionError as exc:
+        if output_format == "cli":
+            print()
+            print(
+                format_pre_commit_error_cli(
+                    f"Failed to scan staged changes:\n{exc}",
+                    action="Check Git repository status and staged files.",
+                )
+            )
+        else:
+            print(f"Failed to scan staged changes: {exc}", file=sys.stderr)
+        return 1
+    except Exception as exc:
+        if output_format == "cli":
+            print()
+            print(
+                format_pre_commit_error_cli(
+                    f"Unexpected error while scanning staged changes:\n{exc}",
+                    action="Review the error above and retry.",
+                )
+            )
+        else:
+            print(f"Unexpected error while scanning staged changes: {exc}", file=sys.stderr)
+        return 1
+
+    reported_findings = [f.redacted_copy() for f in findings]
+
+    if output_format == "json":
+        print(findings_to_json(reported_findings))
+        return 1 if reported_findings else 0
+    elif output_format == "html":
+        print(findings_to_html(reported_findings))
+        return 1 if reported_findings else 0
+
+    print()
+    print(format_pre_commit_result_cli(reported_findings))
+    return 1 if reported_findings else 0
+
+
 def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
         try:
@@ -38,6 +161,32 @@ def main() -> int:
             sys.stderr.reconfigure(encoding="utf-8", errors="replace")
         except Exception:
             pass
+
+    # Check for Git protection subcommands
+    if len(sys.argv) > 1 and sys.argv[1] in ("install-hook", "uninstall-hook", "pre-commit"):
+        subcommand = sys.argv[1]
+        target = "."
+        output_format = "cli"
+
+        # Parse optional target and --format arguments for subcommands
+        idx = 2
+        while idx < len(sys.argv):
+            arg = sys.argv[idx]
+            if arg == "--format" and idx + 1 < len(sys.argv):
+                output_format = sys.argv[idx + 1]
+                idx += 2
+            elif not arg.startswith("-"):
+                target = arg
+                idx += 1
+            else:
+                idx += 1
+
+        if subcommand == "install-hook":
+            return handle_install_hook(target)
+        elif subcommand == "uninstall-hook":
+            return handle_uninstall_hook(target)
+        elif subcommand == "pre-commit":
+            return handle_pre_commit(target, output_format=output_format)
 
     parser = argparse.ArgumentParser(prog="leakshield")
     parser.add_argument("target")

@@ -1,10 +1,10 @@
 # LeakShield Project State
 
-Last Completed Phase: Phase 7C - Demo Verification (complete)
+Last Completed Phase: Priority D - Git Pre-Commit Protection (complete)
 
-Current Phase: Phase 7C - Demo Verification (completed)
+Current Phase: Priority D - Git Pre-Commit Protection (completed)
 
-Status: COMPLETE / END-TO-END CLI, JSON, AND HTML DEMO PATHS VERIFIED
+Status: COMPLETE / PRE-COMMIT PROTECTION, HOOK LIFECYCLE, AND REGRESSION VERIFIED
 
 ## Phase 4A — Context Analysis
 
