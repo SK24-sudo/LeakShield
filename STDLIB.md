@@ -6,6 +6,8 @@ The production scanner does not require third-party Python packages. Its core fu
 
 This document explains **how** that was achieved, what functionality would commonly be provided by external packages, and the engineering trade-offs of the approach.
 
+For a deeper capability-by-capability comparison, see `PACKAGE_KILLER.md`.
+
 ---
 
 ## 1. Dependency Policy
@@ -267,7 +269,7 @@ python -m unittest discover -s tests -v
 The current regression suite completed successfully with:
 
 ```text
-Ran 291 tests
+Ran 292 tests
 
 OK
 ```
