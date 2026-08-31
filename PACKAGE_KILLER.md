@@ -47,6 +47,27 @@ It demonstrates that LeakShield's zero-dependency architecture can implement mea
 
 LeakShield does not claim to be a full reimplementation or feature-equivalent replacement of `detect-secrets`.
 
+### Capability comparison
+
+| Capability                   | `detect-secrets`           | LeakShield                                | Assessment              |
+| ---------------------------- | -------------------------- | ----------------------------------------- | ----------------------- |
+| Pattern/regex detection      | Yes                        | Yes                                       | Direct overlap          |
+| Entropy analysis             | Yes                        | Yes                                       | Direct overlap          |
+| Keyword/credential detection | Yes                        | Credential-assignment detection           | Partial overlap         |
+| Provider-specific plugins    | Extensive plugin ecosystem | Focused detector set                      | detect-secrets-specific |
+| Baselines/filtering          | Yes                        | Different repository/filtering mechanisms | Not equivalent          |
+| AST security analysis        | No                         | Yes                                       | LeakShield-specific     |
+| Git/pre-commit workflow      | Yes                        | Yes                                       | Workflow overlap        |
+| JSON/HTML reporting          | JSON-oriented workflows    | CLI / JSON / HTML                         | Partial overlap         |
+
+### Package Killer assessment — Qualified
+
+LeakShield independently implements a focused subset of repository secret-scanning capabilities commonly provided by established tools such as `detect-secrets`, using only Python's standard library and repository-local code.
+
+This is a meaningful capability-level reimplementation for LeakShield's defined scope, but LeakShield does **not** claim feature-for-feature compatibility with `detect-secrets` or replacement of its complete ecosystem.
+
+Adoption/download figures were not used as a basis for this claim.
+
 ---
 
 ## Other Package Comparisons

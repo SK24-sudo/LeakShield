@@ -158,10 +158,10 @@ else
     export PYTHONPATH="{posix_source_dir}:$PYTHONPATH"
 fi
 
-if command -v python3 >/dev/null 2>&1; then
-    PYTHON_EXEC="python3"
-elif command -v python >/dev/null 2>&1; then
+if command -v python >/dev/null 2>&1; then
     PYTHON_EXEC="python"
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_EXEC="python3"
 elif command -v py >/dev/null 2>&1; then
     PYTHON_EXEC="py -3"
 else
