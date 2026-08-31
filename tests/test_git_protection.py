@@ -205,6 +205,21 @@ class GitProtectionTests(unittest.TestCase):
         self.assertNotEqual(python3_index, -1)
         self.assertLess(python_index, python3_index)
 
+    def test_generated_pyz_hook_uses_pyz_path_and_not_pythonpath(self):
+        """Hook generated with a .pyz path should invoke the .pyz directly."""
+        pyz_path = "/tmp/LeakShield.pyz"
+        hook_content = generate_hook_script(str(self.repo_path), pyz_path=pyz_path)
+        self.assertIn(f'PYZ_PATH="{pyz_path}"', hook_content)
+        self.assertNotIn("PYTHONPATH", hook_content)
+        self.assertIn(f'$PYTHON_EXEC "$PYZ_PATH" pre-commit', hook_content)
+
+    def test_generated_pyz_hook_does_not_contain_dev_specific_paths(self):
+        """Hook generated with a .pyz path should not leak source-tree paths."""
+        pyz_path = "/tmp/LeakShield.pyz"
+        hook_content = generate_hook_script(str(self.repo_path), pyz_path=pyz_path)
+        self.assertNotIn("C:\\Users\\", hook_content)
+        self.assertNotIn("/home/", hook_content)
+
 
 class CliGitProtectionIntegrationTests(unittest.TestCase):
     def setUp(self):
@@ -227,6 +242,72 @@ class CliGitProtectionIntegrationTests(unittest.TestCase):
             self.assertTrue(hook_file.exists())
         finally:
             sys.argv = original_argv
+
+    def test_cli_install_hook_defaults_to_current_repo(self):
+        """install-hook with no target should install in the current repository."""
+        original_argv = sys.argv[:]
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(self.temp_dir)
+            sys.argv = ["leakshield", "install-hook"]
+            exit_code = cli.main()
+            self.assertEqual(exit_code, 0)
+            hook_file = self.repo_path / ".git" / "hooks" / "pre-commit"
+            self.assertTrue(hook_file.exists())
+            content = hook_file.read_text(encoding="utf-8")
+            self.assertIn(LEAKSHIELD_HOOK_MARKER, content)
+        finally:
+            sys.argv = original_argv
+            os.chdir(original_cwd)
+
+    def test_cli_install_hook_with_pyz_path_embeds_pyz_in_hook(self):
+        """When invoked from a .pyz, the hook should reference the .pyz artifact."""
+        original_argv = sys.argv[:]
+        original_cwd = os.getcwd()
+        try:
+            pyz_path = str(Path(self.temp_dir) / "LeakShield.pyz")
+            os.chdir(self.temp_dir)
+            sys.argv = [pyz_path, "install-hook"]
+            exit_code = cli.main()
+            self.assertEqual(exit_code, 0)
+            hook_file = self.repo_path / ".git" / "hooks" / "pre-commit"
+            self.assertTrue(hook_file.exists())
+            content = hook_file.read_text(encoding="utf-8")
+            self.assertIn(f'PYZ_PATH="{Path(pyz_path).as_posix()}"', content)
+            self.assertNotIn("PYTHONPATH", content)
+        finally:
+            sys.argv = original_argv
+            os.chdir(original_cwd)
+
+    def test_git_commit_blocked_by_hook_when_vulnerable(self):
+        """git commit should be blocked when staged content has findings."""
+        install_hook(self.repo_path)
+        test_file = self.repo_path / "vuln.py"
+        var_name = "".join(["pas", "sword"])
+        test_file.write_text(f'{var_name} = "SUPER_SECRET_VALUE_12345"\n', encoding="utf-8")
+        subprocess.run(["git", "add", "vuln.py"], cwd=self.temp_dir, check=True)
+
+        result = subprocess.run(
+            ["git", "commit", "-m", "test"],
+            cwd=self.temp_dir,
+            capture_output=True,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(b"Commit blocked", result.stdout + result.stderr)
+
+    def test_git_commit_allowed_by_hook_when_clean(self):
+        """git commit should succeed when staged content has no findings."""
+        install_hook(self.repo_path)
+        test_file = self.repo_path / "safe.py"
+        test_file.write_text('value = "safe_placeholder"\n', encoding="utf-8")
+        subprocess.run(["git", "add", "safe.py"], cwd=self.temp_dir, check=True)
+
+        result = subprocess.run(
+            ["git", "commit", "-m", "test"],
+            cwd=self.temp_dir,
+            capture_output=True,
+        )
+        self.assertEqual(result.returncode, 0)
 
     def test_cli_uninstall_hook_command_success(self):
         install_hook(self.repo_path)

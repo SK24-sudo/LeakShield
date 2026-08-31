@@ -143,9 +143,31 @@ def is_leakshield_hook(hook_path: Path) -> bool:
         return False
 
 
-def generate_hook_script(leakshield_source_dir: str) -> str:
+def generate_hook_script(leakshield_source_dir: str, pyz_path: str | None = None) -> str:
     """Generate the POSIX pre-commit hook script content."""
-    # Convert source dir to forward slashes for cross-platform POSIX sh compatibility
+    if pyz_path:
+        posix_pyz_path = Path(pyz_path).as_posix()
+        return f"""#!/bin/sh
+{LEAKSHIELD_HOOK_MARKER}
+# Automatically audits staged changes for secrets and security-sensitive patterns.
+
+PYZ_PATH="{posix_pyz_path}"
+
+if command -v python >/dev/null 2>&1; then
+    PYTHON_EXEC="python"
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_EXEC="python3"
+elif command -v py >/dev/null 2>&1; then
+    PYTHON_EXEC="py -3"
+else
+    echo "LeakShield pre-commit check could not complete." >&2
+    echo "Python executable not found in PATH." >&2
+    exit 1
+fi
+
+exec $PYTHON_EXEC "$PYZ_PATH" pre-commit
+"""
+
     posix_source_dir = Path(leakshield_source_dir).as_posix()
     return f"""#!/bin/sh
 {LEAKSHIELD_HOOK_MARKER}
@@ -174,7 +196,7 @@ exec $PYTHON_EXEC -m leakshield pre-commit
 """
 
 
-def install_hook(target_repo: str | Path = ".") -> tuple[bool, str]:
+def install_hook(target_repo: str | Path = ".", pyz_path: str | None = None) -> tuple[bool, str]:
     """Install the LeakShield pre-commit hook in target_repo.
 
     Returns (True, success_message) on success, or (False, error_message) on failure.
@@ -208,8 +230,11 @@ def install_hook(target_repo: str | Path = ".") -> tuple[bool, str]:
                 "LeakShield will never silently overwrite existing developer tooling.",
             )
 
-    leakshield_source_dir = Path(__file__).resolve().parent.parent.as_posix()
-    hook_content = generate_hook_script(leakshield_source_dir)
+    if pyz_path:
+        hook_content = generate_hook_script(None, pyz_path=pyz_path)
+    else:
+        leakshield_source_dir = Path(__file__).resolve().parent.parent.as_posix()
+        hook_content = generate_hook_script(leakshield_source_dir)
 
     try:
         hook_file.write_text(hook_content, encoding="utf-8", newline="\n")
