@@ -779,16 +779,27 @@ Developers may forget to manually run security scans before committing. The pre-
 
 ### Installation
 
-To protect a repository, navigate to it and run:
+The recommended workflow uses the packaged `LeakShield.pyz` artifact so you can install the hook from any repository without needing the LeakShield source tree on your Python path.
+
+**Step 1 — Build the artifact** (once):
 
 ```powershell
-python -m leakshield install-hook
+python build.py
 ```
 
-Or provide the path to the repository you want to protect:
+This creates `dist/LeakShield.pyz`.
+
+**Step 2 — Install the hook in the repository you want to protect:**
 
 ```powershell
-python -m leakshield install-hook <REPOSITORY_PATH>
+cd C:\path\to\MyProject
+python C:\path\to\LeakShield.pyz install-hook
+```
+
+Or, if you are working from the LeakShield source tree, you can also run:
+
+```powershell
+python -m leakshield install-hook C:\path\to\MyProject
 ```
 
 Installation is an explicit action. LeakShield will **never** silently install hooks or overwrite existing, unrelated pre-commit hooks.
@@ -1080,8 +1091,16 @@ python -m leakshield <REPOSITORY_PATH> --format html
 
 ### Install Git pre-commit hook
 
+From the repository you want to protect:
+
 ```powershell
-python -m leakshield install-hook
+python C:\path\to\dist\LeakShield.pyz install-hook
+```
+
+Or from the LeakShield source tree:
+
+```powershell
+python -m leakshield install-hook <REPOSITORY_PATH>
 ```
 
 ### Uninstall Git pre-commit hook

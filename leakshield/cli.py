@@ -33,11 +33,11 @@ def resolve_target_display(target: str) -> str:
         return target
 
 
-def handle_install_hook(target: str) -> int:
+def handle_install_hook(target: str, pyz_path: str | None = None) -> int:
     """Handle the install-hook command."""
     from leakshield.git_protection import install_hook
 
-    success, message = install_hook(target)
+    success, message = install_hook(target, pyz_path=pyz_path)
     if success:
         print(message)
         print()
@@ -186,7 +186,10 @@ def main() -> int:
                 idx += 1
 
         if subcommand == "install-hook":
-            return handle_install_hook(target)
+            pyz_path = None
+            if sys.argv[0].endswith(".pyz"):
+                pyz_path = str(Path(sys.argv[0]).resolve())
+            return handle_install_hook(target, pyz_path=pyz_path)
         elif subcommand == "uninstall-hook":
             return handle_uninstall_hook(target)
         elif subcommand == "pre-commit":
