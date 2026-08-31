@@ -1,14 +1,57 @@
 # Package Killer
 
-Zero dependency is an engineering constraint rather than merely the absence of a dependency manifest.
+## What "Package Killer" Means Here
 
-LeakShield deliberately uses Python standard-library capabilities and repository-local code instead of requiring third-party Python packages for its core scanner functionality.
+LeakShield is not claiming to eliminate every package in a category.
 
-Each section below shows a concrete capability, a reasonable external alternative, the stdlib implementation LeakShield actually uses, and the resulting engineering trade-off.
+The defensible claim is:
+
+> Selected capabilities commonly handled by external packages can be implemented with Python's standard library plus repository-local code for LeakShield's defined scope.
+
+These comparisons describe plausible implementation alternatives. They are not claims that LeakShield historically depended on those packages.
 
 ---
 
-## 1. CLI Argument Parsing
+## Strongest Candidate — `detect-secrets`
+
+`detect-secrets` is the strongest conceptual comparison because it occupies the same repository secret-scanning problem space.
+
+LeakShield implements a focused subset of repository secret-scanning capabilities using the Python standard library.
+
+### Overlap
+
+* repository secret detection
+* pattern-based detection
+* entropy-related heuristics
+* security/pre-commit workflow relevance
+
+### LeakShield implementation
+
+```text
+re + base64 + json + math + repository-local detection logic
+```
+
+### What is not reproduced
+
+* broader detector catalogue
+* plugin ecosystem
+* filtering mechanisms
+* online secret validation
+* feature-for-feature compatibility with detect-secrets workflows
+
+### Why the comparison is still meaningful
+
+It demonstrates that LeakShield's zero-dependency architecture can implement meaningful secret-scanning capability without depending on an external scanning framework.
+
+### Why the claim remains qualified
+
+LeakShield does not claim to be a full reimplementation or feature-equivalent replacement of `detect-secrets`.
+
+---
+
+## Other Package Comparisons
+
+### 1. CLI Argument Parsing
 
 ```
 Capability:
@@ -34,9 +77,7 @@ presentation conveniences, but argparse avoids a runtime
 dependency while providing the required parsing behavior.
 ```
 
----
-
-## 2. Git Integration
+### 2. Git Integration
 
 ```
 Capability:
@@ -64,9 +105,7 @@ Git boundary explicit.
 
 Git itself remains an external executable requirement for Git-specific protection features. Git is not a Python dependency.
 
----
-
-## 3. Filesystem and Ignore Matching
+### 3. Filesystem and Ignore Matching
 
 ```
 Capability:
@@ -88,9 +127,7 @@ more specialized pattern language, while LeakShield keeps the
 implementation smaller and dependency-free.
 ```
 
----
-
-## 4. Secret Detection
+### 4. Secret Detection
 
 ```
 Capability:
@@ -114,9 +151,7 @@ broader detector catalogue and ongoing provider-specific rules.
 LeakShield instead owns a smaller, auditable detector set.
 ```
 
----
-
-## 5. HTML Reporting
+### 5. HTML Reporting
 
 ```
 Capability:
@@ -138,9 +173,7 @@ easier to maintain, while LeakShield avoids an additional
 runtime package and keeps the reporting path explicit.
 ```
 
----
-
-## 6. JSON Reporting
+### 6. JSON Reporting
 
 ```
 Capability:
@@ -162,9 +195,7 @@ specialized features, but those are not required for the
 project's defined output contract.
 ```
 
----
-
-## 7. Static Python Analysis
+### 7. Static Python Analysis
 
 ```
 Capability:
@@ -187,9 +218,7 @@ helper utilities, and broader analysis functionality. LeakShield
 keeps the analysis path small and directly inspectable.
 ```
 
----
-
-## 8. Testing
+### 8. Testing
 
 ```
 Capability:
@@ -211,9 +240,7 @@ pytest offers a richer ecosystem and many convenience features,
 but unittest keeps the project's test execution dependency-free.
 ```
 
----
-
-## 9. Reproducible Packaging
+### 9. Reproducible Packaging
 
 ```
 Capability:
@@ -243,21 +270,21 @@ The runtime artifact is not a native executable. The artifact still requires Pyt
 
 ## Comparison Matrix
 
-| Capability             | Reasonable external option   | LeakShield stdlib                  | Main trade-off                                 |
-| ---------------------- | ---------------------------- | ---------------------------------- | ---------------------------------------------- |
-| CLI parsing            | Click / Typer                | argparse                           | Less framework convenience                     |
-| Git integration        | GitPython                    | subprocess + Git CLI               | Less Python-level abstraction                  |
-| Path matching          | pathspec                     | pathlib + fnmatch                  | Narrower pattern semantics                     |
-| Secret detection       | Security scanning frameworks | re + base64 + math + project logic | Smaller detector scope                         |
-| HTML reporting         | Jinja2                       | html.escape + project formatting   | Less template abstraction                      |
-| JSON                   | External JSON libraries      | json                               | Specialized alternatives unnecessary for scope |
-| Static Python analysis | AST helper frameworks        | ast + project logic                | Fewer analysis abstractions                    |
-| Testing                | pytest                       | unittest                           | Less test-runner convenience                   |
-| Packaging              | setuptools / PyInstaller     | zipfile + stdlib build logic       | No native executable/installer features        |
+| Capability             | Common package approach        | LeakShield stdlib approach                             | Scope / trade-off                             |
+| ---------------------- | ------------------------------ | ------------------------------------------------------ | --------------------------------------------- |
+| CLI                    | Click / Typer                  | `argparse`                                              | stdlib alternative                            |
+| Git operations         | GitPython                      | `subprocess` + Git CLI                                  | focused stdlib alternative                    |
+| Path matching          | pathspec                       | `pathlib` + `fnmatch`                                   | narrower stdlib implementation                |
+| Secret scanning        | detect-secrets / similar tools | `re` + `base64` + `json` + `math` + local logic        | meaningful subset, not feature parity         |
+| HTML templating        | Jinja2                         | `html.escape` + project formatting                      | controlled reporting alternative              |
+| JSON                   | External JSON libraries        | `json`                                                  | specialized alternatives unnecessary for scope |
+| Static Python analysis | AST helper frameworks          | `ast` + project logic                                   | fewer analysis abstractions                   |
+| Testing                | pytest                         | `unittest`                                               | stdlib test framework                         |
+| Packaging              | setuptools / PyInstaller       | `zipfile` + stdlib build logic                          | no native executable/installer features       |
 
 ---
 
-## What We Did Not Claim
+## What LeakShield Does Not Claim
 
 * LeakShield did not remove previously installed dependencies.
 * The listed packages are reasonable alternatives, not historical dependencies.
@@ -267,6 +294,8 @@ The runtime artifact is not a native executable. The artifact still requires Pyt
 * The standard library is part of the Python runtime.
 * LeakShield does not claim feature parity with the listed third-party frameworks.
 * Zero dependency does not automatically mean better performance or broader functionality.
+* LeakShield does not claim to be a complete replacement for `detect-secrets` or any other security-scanning platform.
+* LeakShield does not claim comprehensive secret-scanning coverage.
 
 ---
 
@@ -288,6 +317,7 @@ Verified production standard-library imports:
 | `pathlib`    | Filesystem paths and repository traversal                 |
 | `re`         | Pattern-based secret detection                            |
 | `subprocess` | Controlled interaction with the local Git CLI             |
+| `sys`        | CLI/system interaction                                    |
 
 No third-party Python imports were identified in production code.
 
@@ -302,9 +332,8 @@ python -m unittest discover -s tests -v
 Current regression suite result:
 
 ```
-Ran 292 tests
-
-OK
+Ran 312 tests
+ALL PASSING
 ```
 
 The development environment used for this verification contained only `pip` as an installed package outside the Python standard library.
